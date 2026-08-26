@@ -24,58 +24,61 @@ canvas { outline: none; }
 .maplibregl-ctrl-attrib { font-size: 10px; }
 
 /* --- управљачка плоча, по узору на deck.gl примере --- */
+/* Боје панела и облачића преузете са deck.gl странице:
+   подлога rgb(41,50,60), текст rgb(160,167,180). */
 #kontrole {
-  position: absolute; top: 0; left: 0; margin: 12px; padding: 18px 20px;
-  z-index: 2; background: #ffffff; color: #121212;
-  box-shadow: 0 0 4px rgba(0, 0, 0, .15);
-  font-size: 12px; line-height: 1.5; width: 292px;
+  position: absolute; top: 0; right: 0; margin: 12px; padding: 16px 18px;
+  z-index: 2; background: rgb(41, 50, 60); color: rgb(160, 167, 180);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .45);
+  font-size: 12px; line-height: 1.5; width: 300px;
   max-height: calc(100vh - 24px); overflow-y: auto;
 }
-#kontrole h1 { font-size: 13px; font-weight: bold; margin: 0 0 2px; }
-#kontrole .izvor { color: #666; margin: 0 0 14px; font-size: 11px; }
-#kontrole .izvor b { color: #b8402f; font-weight: bold; }
+#kontrole h1 { font-size: 13px; font-weight: bold; margin: 0 0 8px; color: #fff; }
+#kontrole .izvor { margin: 0 0 12px; font-size: 11.5px; }
+#kontrole .izvor b { color: #e8a33d; font-weight: bold; }
 
 .red-kontrole {
   display: grid; grid-template-columns: 92px 1fr 48px;
   align-items: center; gap: 8px; margin-bottom: 7px;
 }
-.red-kontrole label { color: #333; }
+.red-kontrole label { color: rgb(160,167,180); }
 .red-kontrole .v {
-  text-align: right; font-variant-numeric: tabular-nums; color: #121212;
+  text-align: right; font-variant-numeric: tabular-nums; color: #fff;
 }
 input[type=range] {
   width: 100%; height: 18px; margin: 0; cursor: pointer; accent-color: #d1374e;
 }
 input[type=range]:focus-visible { outline: 2px solid #d1374e; outline-offset: 2px; }
 
-.crta { border: 0; border-top: 1px solid #e2e2e2; margin: 14px 0 12px; }
+.crta { border: 0; border-top: 1px solid rgba(160,167,180,.25); margin: 13px 0 11px; }
 
 .vreme-red { display: grid; grid-template-columns: 64px 1fr auto; gap: 8px;
              align-items: center; }
-#mesec { font-weight: bold; font-variant-numeric: tabular-nums; font-size: 13px; }
+#mesec { font-weight: bold; font-variant-numeric: tabular-nums; font-size: 13px; color: #fff; }
 button {
-  appearance: none; font: inherit; font-size: 11px; background: #f2f2f2;
-  color: #121212; border: 1px solid #d4d4d4; padding: 4px 10px; cursor: pointer;
+  appearance: none; font: inherit; font-size: 11px;
+  background: rgba(255,255,255,.09); color: rgb(200,208,218);
+  border: 1px solid rgba(160,167,180,.3); padding: 4px 10px; cursor: pointer;
 }
-button:hover { background: #e6e6e6; }
+button:hover { background: rgba(255,255,255,.16); }
 button:focus-visible { outline: 2px solid #d1374e; outline-offset: 1px; }
 button.radi { background: #d1374e; border-color: #d1374e; color: #fff; }
 
 /* --- легенде --- */
-.naslovak { font-size: 11px; color: #666; margin: 0 0 5px; }
+.naslovak { font-size: 11px; color: rgb(140,148,160); margin: 0 0 5px; }
 .traka { height: 12px; display: flex; }
 .traka i { flex: 1; }
-.osa { display: flex; justify-content: space-between; color: #666;
+.osa { display: flex; justify-content: space-between; color: rgb(140,148,160);
        font-size: 10.5px; margin-top: 3px; font-variant-numeric: tabular-nums; }
 .stubici { display: flex; align-items: flex-end; gap: 3px; height: 26px; margin-top: 2px; }
-.stubici i { flex: 1; background: #9b9b9b; }
+.stubici i { flex: 1; background: rgb(120,130,145); }
 
 .brojka { display: flex; justify-content: space-between; margin-top: 3px; }
-.brojka span:last-child { font-variant-numeric: tabular-nums; font-weight: bold; }
+.brojka span:last-child { font-variant-numeric: tabular-nums; font-weight: bold; color: #fff; }
 
 .napomena {
-  margin: 12px 0 0; padding: 7px 9px; background: #fdf4e3; color: #7a5312;
-  border-left: 3px solid #e0a838; font-size: 11px; line-height: 1.45;
+  margin: 12px 0 0; padding: 7px 9px; background: rgba(224,168,56,.13);
+  color: #e0b464; border-left: 3px solid #e0a838; font-size: 11px; line-height: 1.45;
 }
 
 /* --- доњи наговештај, као у примеру --- */
@@ -126,17 +129,17 @@ button.radi { background: #d1374e; border-color: #d1374e; color: #fff; }
 
   <div class="red-kontrole">
     <label for="radijus">Пречник</label>
-    <input type="range" id="radijus" min="1000" max="12000" step="250" value="3000">
-    <span class="v" id="radijus-v">3000</span>
+    <input type="range" id="radijus" min="500" max="20000" step="100" value="2000">
+    <span class="v" id="radijus-v">2000</span>
   </div>
   <div class="red-kontrole">
     <label for="pokrivenost">Попуњеност</label>
-    <input type="range" id="pokrivenost" min="0.1" max="1" step="0.05" value="1">
-    <span class="v" id="pokrivenost-v">1,00</span>
+    <input type="range" id="pokrivenost" min="0" max="1" step="0.1" value="0.7">
+    <span class="v" id="pokrivenost-v">0,70</span>
   </div>
   <div class="red-kontrole">
     <label for="percentil">Горњи перцентил</label>
-    <input type="range" id="percentil" min="80" max="100" step="1" value="100">
+    <input type="range" id="percentil" min="80" max="100" step="0.1" value="100">
     <span class="v" id="percentil-v">100</span>
   </div>
   <div class="red-kontrole">
@@ -178,7 +181,7 @@ button.radi { background: #d1374e; border-color: #d1374e; color: #fff; }
   <div class="brojka"><span>Просечна цена</span><span id="prosek">—</span></div>
   <div class="brojka"><span>Највећи раст</span><span id="najveci">—</span></div>
   <div class="brojka"><span>Тачака мреже</span><span id="tacaka">—</span></div>
-  <p style="margin:8px 0 0;font-size:10.5px;color:#888" id="stanje-podloge">подлога карте: учитавам…</p>
+  <p style="margin:8px 0 0;font-size:10.5px;color:rgb(120,128,140)" id="stanje-podloge">подлога карте: учитавам…</p>
 
   <p class="napomena">
     Уочите колико ниских ћелија нестане иза високих. Зато 3Д никад не треба

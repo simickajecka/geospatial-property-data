@@ -77,7 +77,7 @@ const MATERIJAL = {
 };
 
 let D = null, tacke = null, t = M - 1, animacija = null;
-let poluprecnik = 3000, pokrivenost = 1, percentil = 100, visinaSkala = 50;
+let poluprecnik = 2000, pokrivenost = 0.7, percentil = 100, visinaSkala = 50;
 
 /* ---------- подаци ---------- */
 
@@ -131,6 +131,7 @@ function slojevi() {
       data: tacke,
       getPosition: d => d.position,
 
+      gpuAggregation: true,
       radius: poluprecnik,
       coverage: pokrivenost,
       upperPercentile: percentil,
@@ -203,40 +204,29 @@ const dek = new DeckGL(Object.assign({
   effects: [svetlo],
   layers: [],
 }, imaPodlogu ? { map: maplibregl, mapStyle: PODLOGA } : {}, {
-  /* Пажња на облик изабраног објекта у deck.gl 9: он има col, row,
-     colorValue, elevationValue и count. Нема `points` — то постоји само
-     уз агрегацију на процесору — ни `position`. Координата се узима из
-     info.coordinate. Читање object.points.length овде руши облачић. */
+  /* Враћамо обичан текст, не HTML — тада deck.gl примени свој
+     подразумевани изглед облачића, исти као на њиховој страници.
+
+     Пажња на облик објекта у deck.gl 9: има col, row, colorValue,
+     elevationValue и count. Нема `points` (то је само уз агрегацију на
+     процесору), а `position` уме да да бесмислене вредности — и њихов
+     пример га зато штити са Number.isFinite. Поузданија је info.coordinate. */
   getTooltip: (info) => {
     try {
       const o = info && info.object;
       if (!o) return null;
-
+      const k = info.coordinate;
       const cena = Number.isFinite(o.colorValue) ? Math.round(o.colorValue) : null;
       const ind = Number.isFinite(o.elevationValue) ? o.elevationValue : null;
-      const koord = info.coordinate;
 
-      const redovi = [];
-      if (koord && koord.length === 2) {
-        redovi.push('<span class="k">ширина</span> ' + koord[1].toFixed(6));
-        redovi.push('<span class="k">дужина</span> ' + koord[0].toFixed(6));
-      }
-      if (cena !== null) {
-        redovi.push('<b>' + cena + ' €/m²</b>' +
-          (ind !== null
-            ? ' · индекс ' + ind.toFixed(3).replace(".", ",") +
-              ' (+' + Math.round((ind - 1) * 100) + ' %)'
-            : ''));
-      }
-      if (Number.isFinite(o.count)) {
-        redovi.push('<span class="k">' + o.count + ' тачака мреже</span>');
-      }
-      if (!redovi.length) return null;
-
-      return {
-        html: '<div class="opis">' + redovi.join("<br>") + '</div>',
-        style: { background: "none", padding: "0", margin: "0" }
-      };
+      return [
+        k && k.length === 2 ? "ширина: " + k[1].toFixed(6) : null,
+        k && k.length === 2 ? "дужина: " + k[0].toFixed(6) : null,
+        cena !== null ? cena + " €/m²" : null,
+        ind !== null ? "индекс " + ind.toFixed(3).replace(".", ",") +
+                       "  (+" + Math.round((ind - 1) * 100) + " %)" : null,
+        Number.isFinite(o.count) ? o.count + " тачака мреже" : null
+      ].filter(Boolean).join("\n");
     } catch (e) {
       prijavi("Облачић", e);
       return null;
