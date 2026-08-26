@@ -16,3 +16,5 @@ node_modules/
 prototip/hexagon-layer.html
 prototip/hexagon-layer-cdn.html
 prototip/deck.gl-LICENSES.txt
+prototip/maplibre-gl.js
+prototip/maplibre-gl.css

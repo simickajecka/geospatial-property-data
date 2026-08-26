@@ -95,9 +95,23 @@ const MAPLIBRE_TAGOVI = [
   '<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"><\/script>'
 ].join('\n');
 
+/*
+ * maplibre-gl se ugradjuje kad je dostupan lokalno (--maplibre), da bi glavni
+ * fajl sa mreze trazio samo tajlove podloge, a ne i biblioteke. Ako ga nema,
+ * fajl radi bez podloge — prikaz se sam prilagodi.
+ */
+const mlJs = arg('maplibre', null);
+const mlCss = arg('maplibre-css', null);
+let ugradjenMaplibre = '<!-- maplibre-gl nije ugradjen: prikaz radi bez podloge karte -->';
+if (mlJs && fs.existsSync(mlJs)) {
+  const css = mlCss && fs.existsSync(mlCss) ? fs.readFileSync(mlCss, 'utf8') : '';
+  ugradjenMaplibre =
+    (css ? '<style>' + css + '</style>\n' : '') +
+    '<script>' + fs.readFileSync(mlJs, 'utf8') + '<' + '/script>';
+}
+
 const telo = sablon
-  .replace('<!--__MAPLIBRE__-->',
-    '<!-- Подлога тражи мрежу, па је у уграђеној варијанти нема. -->')
+  .replace('<!--__MAPLIBRE__-->', () => ugradjenMaplibre)
   .replace('/*__GENERATOR__*/', () => generatorZaWeb)
   .replace('/*__DECKGL__*/', () => deckKod)
   .replace('/*__APP__*/', () => app);

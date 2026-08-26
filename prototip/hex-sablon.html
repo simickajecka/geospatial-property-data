@@ -8,7 +8,7 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
 body {
-  background: #000000;
+  background: #0e0e0e;
   color: #ffffff;
   font-family: Helvetica, Arial, sans-serif;
   font-size: 12px;
@@ -19,7 +19,7 @@ body {
    ширину/висину елемента и позадинску меморију према величини контејнера.
    Правило типа `canvas { inset: 0 }` му то поквари — платно остане на
    подразумеваних 300×150 па се растегне и слика буде мутна. */
-#platno { position: fixed; inset: 0; background: #000000; }
+#platno { position: fixed; inset: 0; background: #0e0e0e; }
 canvas { outline: none; }
 .maplibregl-ctrl-attrib { font-size: 10px; }
 
@@ -95,8 +95,16 @@ button.radi { background: #d1374e; border-color: #d1374e; color: #fff; }
 
 #ucitavanje {
   position: fixed; inset: 0; display: grid; place-items: center; z-index: 50;
-  background: #000; color: #7a7a7a; font-size: 12px;
+  background: #0e0e0e; color: #7a7a7a; font-size: 12px;
 }
+
+#greska {
+  display: none; position: fixed; left: 12px; right: 12px; bottom: 12px;
+  z-index: 60; background: #6d1f1f; color: #ffe4e0; padding: 12px 15px;
+  font-size: 12px; line-height: 1.5; max-height: 44vh; overflow-y: auto;
+  border-left: 4px solid #ff7a66;
+}
+#greska b { color: #ffb3a6; }
 
 @media (max-width: 640px) {
   #kontrole { width: calc(100% - 24px); }
@@ -107,6 +115,7 @@ button.radi { background: #d1374e; border-color: #d1374e; color: #fff; }
 
 <div id="platno"></div>
 <div id="ucitavanje">рачунам мрежу и 96 месеци…</div>
+<div id="greska" role="alert"></div>
 
 <div id="kontrole">
   <h1>Цена стана од 50 m² у Србији, 2019–2026</h1>
@@ -169,6 +178,7 @@ button.radi { background: #d1374e; border-color: #d1374e; color: #fff; }
   <div class="brojka"><span>Просечна цена</span><span id="prosek">—</span></div>
   <div class="brojka"><span>Највећи раст</span><span id="najveci">—</span></div>
   <div class="brojka"><span>Тачака мреже</span><span id="tacaka">—</span></div>
+  <p style="margin:8px 0 0;font-size:10.5px;color:#888" id="stanje-podloge">подлога карте: учитавам…</p>
 
   <p class="napomena">
     Уочите колико ниских ћелија нестане иза високих. Зато 3Д никад не треба

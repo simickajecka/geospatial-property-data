@@ -6,6 +6,32 @@
    приказ изгледао исто. Генератор долази из generator/generator.js. */
 "use strict";
 
+/* ---------- видљиво пријављивање грешака ----------
+   Без овога свака грешка нестане у конзоли и страница само „не ради“.
+   Сваки квар се исписује преко екрана, да се одмах види шта је. */
+
+function prijavi(sta, greska) {
+  const p = document.getElementById("greska");
+  if (!p) return;
+  p.style.display = "block";
+  p.innerHTML +=
+    "<b>" + sta + "</b><br>" +
+    String(greska && greska.message ? greska.message : greska) + "<br><br>";
+  const u = document.getElementById("ucitavanje");
+  if (u) u.remove();
+}
+
+window.addEventListener("error", e => prijavi("Грешка у скрипти", e.error || e.message));
+window.addEventListener("unhandledrejection", e => prijavi("Неухваћена грешка", e.reason));
+
+if (typeof deck === "undefined") {
+  prijavi("deck.gl није учитан",
+    "Библиотека није доступна. Ако сте отворили CDN варијанту, " +
+    "мрежа вероватно не пропушта unpkg.com. Отворите hexagon-layer.html, " +
+    "у њој је deck.gl уграђен у сам фајл.");
+  throw new Error("deck.gl nije ucitan");
+}
+
 const { DeckGL, HexagonLayer, PathLayer,
         LightingEffect, AmbientLight, PointLight } = deck;
 
@@ -140,10 +166,14 @@ const POCETNI_POGLED = {
   minZoom: 5, maxZoom: 15, pitch: 40.5, bearing: -27
 };
 
-/* Подлога постоји само у CDN варијанти, где је maplibre-gl учитан.
-   Иста подлога коју користи и deck.gl пример. */
+/* Иста подлога коју користи deck.gl пример. Тражи мрежу — тајлови стижу
+   са tiles.basemaps.cartocdn.com. Ако не прође, приказ ради и без ње. */
 const PODLOGA = "https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json";
 const imaPodlogu = typeof maplibregl !== "undefined";
+if (!imaPodlogu) {
+  const n = document.getElementById("stanje-podloge");
+  if (n) n.textContent = "подлога карте: библиотека није учитана";
+}
 
 const dek = new DeckGL(Object.assign({
   container: "platno",
@@ -233,9 +263,35 @@ dugme.addEventListener("click", () => {
 /* Не користити requestAnimationFrame: у картици која није видљива он се
    не извршава, па се страница никад не иницијализује. */
 setTimeout(() => {
-  pripremi();
-  document.getElementById("klizac").value = t;
-  osvezi();
-  document.getElementById("ucitavanje").remove();
-  document.getElementById("tacaka").textContent = D.n.toLocaleString("sr-RS");
+  try {
+    pripremi();
+    document.getElementById("klizac").value = t;
+    osvezi();
+    const u = document.getElementById("ucitavanje");
+    if (u) u.remove();
+    document.getElementById("tacaka").textContent = D.n.toLocaleString("sr-RS");
+  } catch (e) {
+    prijavi("Рачунање података није успело", e);
+  }
 }, 0);
+
+/* Стање подлоге пратимо преко догађаја саме карте, не на истек времена —
+   иначе се пријави квар и кад подлога само још учитава. */
+if (imaPodlogu) {
+  const n = document.getElementById("stanje-podloge");
+  const javi = (txt) => { if (n) n.textContent = "подлога карте: " + txt; };
+  try {
+    const m = dek.getMapboxMap ? dek.getMapboxMap() : null;
+    if (!m) {
+      javi("није направљена");
+    } else {
+      m.on("load", () => javi("учитана"));
+      m.on("error", (e) => {
+        const p = e && e.error && e.error.message ? e.error.message : "неуспех";
+        javi("не стиже — " + p);
+      });
+    }
+  } catch (e) {
+    javi("непознато стање");
+  }
+}
