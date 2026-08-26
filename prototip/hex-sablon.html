@@ -1,0 +1,173 @@
+<title>Шестоугаона ценовна површина</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+/* Приказ је намерно у једном тамном свету — тродимензионални WebGL
+   призор се на светлој подлози губи. Све боје су зато изричито постављене. */
+:root {
+  --dno:    #080D10;
+  --ploca:  rgba(17, 27, 32, .90);
+  --ivica:  rgba(120, 152, 165, .22);
+  --tekst:  #E6EFF2;
+  --tiho:   #93AAB4;
+  --tise:   #6A828D;
+  --naglas: #F6A27A;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--dno); color: var(--tekst);
+  font-family: "IBM Plex Sans", system-ui, sans-serif; font-size: 14px;
+  overflow: hidden; -webkit-font-smoothing: antialiased;
+}
+#platno { position: fixed; inset: 0; background: var(--dno); }
+canvas { outline: none; }
+
+.panel {
+  position: fixed; background: var(--ploca); border: 1px solid var(--ivica);
+  border-radius: 5px; backdrop-filter: blur(14px);
+  box-shadow: 0 8px 34px rgba(0,0,0,.5);
+}
+
+/* --- заглавље --- */
+#zaglavlje { top: 16px; left: 16px; padding: 15px 19px; max-width: 335px; }
+.oko { font-size: 10.5px; letter-spacing: .15em; text-transform: uppercase;
+       color: var(--naglas); font-weight: 600; margin: 0 0 5px; }
+h1 { font-size: 19px; font-weight: 600; margin: 0 0 9px; letter-spacing: -.01em; }
+#zaglavlje p { margin: 0; font-size: 12.5px; color: var(--tiho); line-height: 1.5; }
+.znak { display: inline-block; margin-top: 10px; font-size: 10.5px; font-weight: 600;
+  letter-spacing: .05em; color: #F0C07A; background: rgba(240,192,122,.11);
+  border: 1px solid rgba(240,192,122,.3); border-radius: 3px; padding: 3px 8px; }
+
+/* --- легенда --- */
+#legenda { top: 16px; right: 16px; padding: 14px 17px; width: 216px; }
+h2 { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase;
+     color: var(--tise); font-weight: 600; margin: 0 0 9px; }
+.traka { height: 11px; border-radius: 2px; margin-bottom: 4px;
+  background: linear-gradient(to right,
+    rgb(12,9,40), rgb(65,20,110), rgb(130,37,129),
+    rgb(201,59,112), rgb(246,122,93), rgb(252,205,138)); }
+.osa { display: flex; justify-content: space-between; font-size: 10.5px;
+  color: var(--tise); font-family: "IBM Plex Mono", monospace; }
+.visina-crtez { display: flex; align-items: flex-end; gap: 4px; height: 34px;
+  margin: 12px 0 4px; }
+.visina-crtez i { flex: 1; background: linear-gradient(to top,
+  rgba(246,162,122,.85), rgba(246,162,122,.25)); border-radius: 1px 1px 0 0; }
+.razdvoj { border: 0; border-top: 1px solid var(--ivica); margin: 13px 0; }
+
+/* --- бројке --- */
+.parovi { display: grid; grid-template-columns: 1fr auto; gap: 5px 10px;
+  font-size: 12px; }
+.parovi dt { color: var(--tise); margin: 0; }
+.parovi dd { margin: 0; text-align: right; font-family: "IBM Plex Mono", monospace;
+  font-variant-numeric: tabular-nums; color: var(--tekst); }
+
+/* --- доња трака --- */
+#traka { bottom: 16px; left: 16px; right: 16px; padding: 13px 19px 15px; }
+.red { display: flex; align-items: center; gap: 15px; }
+#mesec { font-family: "IBM Plex Mono", monospace; font-size: 21px; font-weight: 500;
+  min-width: 106px; font-variant-numeric: tabular-nums; }
+input[type=range] { flex: 1; accent-color: var(--naglas); height: 22px; cursor: pointer; }
+input[type=range]:focus-visible { outline: 2px solid var(--naglas); outline-offset: 3px; }
+
+button { appearance: none; font: inherit; font-size: 12.5px; font-weight: 500;
+  background: rgba(255,255,255,.07); color: var(--tekst);
+  border: 1px solid var(--ivica); border-radius: 3px; padding: 7px 14px;
+  cursor: pointer; white-space: nowrap; transition: background .13s, border-color .13s; }
+button:hover { background: rgba(255,255,255,.13); border-color: rgba(246,162,122,.5); }
+button:focus-visible { outline: 2px solid var(--naglas); outline-offset: 2px; }
+button.radi { background: var(--naglas); color: #21100A; border-color: var(--naglas); }
+
+.podesavanja { display: flex; gap: 22px; margin-top: 12px; padding-top: 12px;
+  border-top: 1px solid var(--ivica); flex-wrap: wrap; align-items: center; }
+.klizacic { display: flex; align-items: center; gap: 9px; font-size: 11.5px;
+  color: var(--tise); }
+.klizacic input { width: 116px; flex: none; }
+.klizacic b { font-family: "IBM Plex Mono", monospace; color: var(--tiho);
+  font-weight: 500; min-width: 44px; }
+
+/* --- облачић --- */
+.opis { background: rgba(12,20,24,.96); border: 1px solid var(--ivica);
+  border-radius: 4px; padding: 9px 12px; font-size: 12px; line-height: 1.45;
+  color: var(--tekst); box-shadow: 0 6px 22px rgba(0,0,0,.55); }
+.opis b { display: block; font-size: 15px; margin-bottom: 3px; color: var(--naglas);
+  font-family: "IBM Plex Mono", monospace; }
+.opis span { display: block; color: var(--tiho); font-size: 11.5px; }
+
+#ucitavanje { position: fixed; inset: 0; display: grid; place-items: center;
+  background: var(--dno); z-index: 50; font-family: "IBM Plex Mono", monospace;
+  color: var(--tise); font-size: 13px; }
+
+@media (max-width: 720px) {
+  #zaglavlje { max-width: none; right: 16px; }
+  #legenda { top: auto; bottom: 152px; }
+  .podesavanja { gap: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: .01ms !important; }
+}
+</style>
+
+<div id="platno"></div>
+<div id="ucitavanje">рачунам мрежу и 96 месеци…</div>
+
+<div class="panel" id="zaglavlje">
+  <p class="oko">deck.gl · HexagonLayer</p>
+  <h1>Шестоугаона ценовна површина</h1>
+  <p>Висина шестоугла носи индекс кретања у односу на јануар 2019,
+     боја носи цену по m². Вуците мишем за ротацију, Ctrl за нагиб.</p>
+  <span class="znak">СИНТЕТИЧКИ ПОДАЦИ</span>
+</div>
+
+<div class="panel" id="legenda">
+  <h2>Боја — цена по m²</h2>
+  <div class="traka"></div>
+  <div class="osa"><span>1000 €</span><span>2700 €</span></div>
+
+  <hr class="razdvoj">
+
+  <h2>Висина — индекс</h2>
+  <div class="visina-crtez">
+    <i style="height:16%"></i><i style="height:34%"></i><i style="height:52%"></i>
+    <i style="height:71%"></i><i style="height:88%"></i><i style="height:100%"></i>
+  </div>
+  <div class="osa"><span>1,00</span><span>2,20</span></div>
+
+  <hr class="razdvoj">
+
+  <dl class="parovi">
+    <dt>просек</dt><dd id="prosek">—</dd>
+    <dt>највећи раст</dt><dd id="najveci">—</dd>
+    <dt>тачака мреже</dt><dd id="tacaka">—</dd>
+    <dt>рачунато</dt><dd id="racun">—</dd>
+  </dl>
+</div>
+
+<div class="panel" id="traka">
+  <div class="red">
+    <div id="mesec">2026-12</div>
+    <button id="pusti">▶  Пусти</button>
+    <input type="range" id="klizac" min="0" max="95" value="95" step="1"
+           aria-label="Месец">
+    <button id="ravno">Погледај одозго</button>
+  </div>
+  <div class="podesavanja">
+    <label class="klizacic">висина
+      <input type="range" id="visina" min="800" max="9000" step="100" value="3800">
+      <b id="visina-v">3800</b>
+    </label>
+    <label class="klizacic">пречник ћелије
+      <input type="range" id="radijus" min="3000" max="14000" step="500" value="6000">
+      <b id="radijus-v">6 km</b>
+    </label>
+    <span style="font-size:11.5px;color:var(--tise)">
+      Уочите колико ниских ћелија нестане иза високих — зато 3Д никад није једини приказ.
+    </span>
+  </div>
+</div>
+
+<script>/*__GENERATOR__*/</script>
+<script>/*__DECKGL__*/</script>
+<script>/*__APP__*/</script>

@@ -11,3 +11,7 @@ node_modules/
 
 # Word privremeni fajlovi
 ~$*
+
+# Sklopljeni prikaz — pravi se iz sablona i deck.gl bandla (vidi prototip/README.md)
+prototip/hexagon-layer.html
+prototip/deck.gl-LICENSES.txt

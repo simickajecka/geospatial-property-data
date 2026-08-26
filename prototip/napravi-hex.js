@@ -1,0 +1,117 @@
+/*
+ * napravi-hex.js — sastavlja samostalan hexagon-layer.html.
+ *
+ *   node napravi-hex.js --deck <putanja/do/dist.min.js>
+ *
+ * Objavljena stranica ne sme da povlaci skripte sa CDN-a, pa se deck.gl
+ * bandl ugradjuje u sam fajl. Generator se preuzima iz generator/generator.js
+ * da se logika ne bi duplirala.
+ */
+
+const fs = require('fs');
+const path = require('path');
+
+const arg = (ime, podr) => {
+  const i = process.argv.indexOf('--' + ime);
+  return i > -1 && process.argv[i + 1] ? process.argv[i + 1] : podr;
+};
+
+const koren = __dirname;
+
+/* --- pronadji deck.gl bandl --- */
+function nadjiDeck() {
+  const rucno = arg('deck', null);
+  if (rucno) {
+    if (!fs.existsSync(rucno)) throw new Error('Nema fajla: ' + rucno);
+    return rucno;
+  }
+  const kandidati = [];
+  const baze = [
+    path.join(koren, 'node_modules', 'deck.gl'),
+    path.join(koren, '..', 'node_modules', 'deck.gl'),
+    arg('node-modules', '') && path.join(arg('node-modules', ''), 'deck.gl')
+  ].filter(Boolean);
+
+  for (const b of baze) {
+    if (!fs.existsSync(b)) continue;
+    for (const rel of ['dist.min.js', 'dist/dist.min.js', 'dist.js',
+                       'dist/dist.js', 'dist/dist.dev.js']) {
+      const p = path.join(b, rel);
+      if (fs.existsSync(p)) kandidati.push(p);
+    }
+  }
+  if (!kandidati.length) {
+    throw new Error(
+      'Nije nadjen deck.gl bandl.\n' +
+      'Instalirati sa:  npm install deck.gl\n' +
+      'pa pokrenuti:    node napravi-hex.js --deck <putanja>/deck.gl/dist.min.js');
+  }
+  return kandidati[0];
+}
+
+const deckPut = nadjiDeck();
+let deckKod = fs.readFileSync(deckPut, 'utf8');
+
+/*
+ * Bandl na kraju nosi blok sa licencama ugradjenih biblioteka. Blok sadrzi
+ * i URL-ove, na koje validator objavljivanja reaguje. Izdvajamo ga u zaseban
+ * fajl — isto sto radi webpack sa extractComments — pa napomene ostaju
+ * sacuvane i dostupne, kako licence i traze.
+ */
+const POCETAK = '/*! Bundled license information:';
+let licence = null;
+const i0 = deckKod.indexOf(POCETAK);
+if (i0 > -1) {
+  const i1 = deckKod.indexOf('*/', i0);
+  if (i1 > -1) {
+    licence = deckKod.slice(i0, i1 + 2);
+    deckKod = deckKod.slice(0, i0) +
+      '/* Napomene o licencama ugradjenih biblioteka: vidi deck.gl-LICENSES.txt */' +
+      deckKod.slice(i1 + 2);
+    fs.writeFileSync(path.join(koren, 'deck.gl-LICENSES.txt'),
+      'deck.gl ' + (JSON.parse(fs.readFileSync(
+        path.join(path.dirname(deckPut), 'package.json'), 'utf8').toString()).version || '') +
+      ' — MIT (Copyright OpenJS Foundation and contributors)\n' +
+      'https://github.com/visgl/deck.gl/blob/master/LICENSE\n\n' +
+      'Napomene ugradjenih biblioteka, izdvojene iz dist.min.js:\n\n' + licence + '\n');
+  }
+}
+const generator = fs.readFileSync(path.join(koren, '..', 'generator', 'generator.js'), 'utf8');
+const app = fs.readFileSync(path.join(koren, 'hex-app.js'), 'utf8');
+const sablon = fs.readFileSync(path.join(koren, 'hex-sablon.html'), 'utf8');
+
+/* generator.js je pisan i za Node — u pregledacu ga izlazemo kao globalni G */
+const generatorZaWeb =
+  '(function(){\n' +
+  'var module = { exports: {} };\n' +
+  generator + '\n' +
+  'window.G = module.exports;\n' +
+  '})();';
+
+const telo = sablon
+  .replace('/*__GENERATOR__*/', () => generatorZaWeb)
+  .replace('/*__DECKGL__*/', () => deckKod)
+  .replace('/*__APP__*/', () => app);
+
+/* Samostalan dokument — bez deklaracije kodiranja cirilica se lomi kad se
+   fajl otvori lokalno ili posluzi sa servera koji ne salje charset. */
+const izlaz =
+  '<!DOCTYPE html>\n<html lang="sr">\n<head>\n' +
+  '<meta charset="utf-8">\n' +
+  '<meta name="viewport" content="width=device-width, initial-scale=1">\n' +
+  telo +
+  '\n</html>\n';
+
+const putIzlaza = path.join(koren, 'hexagon-layer.html');
+fs.writeFileSync(putIzlaza, izlaz);
+
+const mb = (s) => (Buffer.byteLength(s) / 1048576).toFixed(2) + ' MB';
+console.log('deck.gl bandl : ' + deckPut);
+console.log('  deck.gl     ' + mb(deckKod));
+console.log('  generator   ' + mb(generatorZaWeb));
+console.log('  aplikacija  ' + mb(app));
+console.log('  ------------------------');
+console.log('  ukupno      ' + mb(izlaz) + '   -> ' + putIzlaza);
+if (Buffer.byteLength(izlaz) > 16 * 1048576) {
+  console.log('\n  UPOZORENJE: preko 16 MB, Artifact to nece primiti.');
+}
