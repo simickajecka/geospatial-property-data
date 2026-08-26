@@ -1,0 +1,28 @@
+# Normalizuj kraj reda: u repozitorijumu se cuva LF, a pri checkout-u
+# se koristi kraj reda karakteristican za platformu.
+* text=auto
+
+# Tekstualni fajlovi
+*.md    text
+*.txt   text
+*.js    text
+*.py    text
+*.json  text
+*.html  text
+*.css   text
+*.csv   text
+*.xml   text
+*.svg   text
+
+# Binarni fajlovi (git nikad ne dira kraj reda)
+*.docx  binary
+*.doc   binary
+*.dotx  binary
+*.pdf   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.zip   binary
+*.xlsx  binary
+*.pptx  binary
