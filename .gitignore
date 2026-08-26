@@ -12,8 +12,11 @@ node_modules/
 # Word privremeni fajlovi
 ~$*
 
+# Sklopljeni prikazi — prave se iz sablona, aplikacije i bandla
+prototip/hexagon-layer.html
+prototip/hexagon-layer-cdn.html
+prototip/deck.gl-LICENSES.txt
+
+# Bandl preuzet za ugradnju
 prototip/maplibre-gl.js
 prototip/maplibre-gl.css
-
-# Lokalna podesavanja alata
-.claude/

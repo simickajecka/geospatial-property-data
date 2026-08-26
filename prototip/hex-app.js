@@ -77,7 +77,14 @@ const MATERIJAL = {
 };
 
 let D = null, tacke = null, t = M - 1, animacija = null;
-let poluprecnik = 2000, pokrivenost = 0.7, percentil = 100, visinaSkala = 50;
+let poluprecnik = 2000, pokrivenost = 0.7, percentil = 100;
+
+/* Почињемо спљоштено па подижемо — тако се шестоуглови сваки пут „израсту“.
+   transitions.elevationScale анимира само промену вредности, па ако одмах
+   цртамо са коначном висином ефекта нема. Исто ради и deck.gl пример:
+   elevationScale: data && data.length ? 50 : 0 */
+const VISINA_CILJ = 50;
+let visinaSkala = 0;
 
 /* ---------- подаци ---------- */
 
@@ -297,6 +304,14 @@ setTimeout(() => {
     const u = document.getElementById("ucitavanje");
     if (u) u.remove();
     document.getElementById("tacaka").textContent = D.n.toLocaleString("sr-RS");
+
+    /* Тек кад је прво спљоштено цртање отишло, дижемо на пуну висину. */
+    setTimeout(() => {
+      visinaSkala = VISINA_CILJ;
+      const kl = document.getElementById("visina");
+      if (kl) { kl.value = VISINA_CILJ; document.getElementById("visina-v").textContent = VISINA_CILJ; }
+      osvezi();
+    }, 80);
   } catch (e) {
     prijavi("Рачунање података није успело", e);
   }

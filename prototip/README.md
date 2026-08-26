@@ -27,16 +27,27 @@ CDN варијанта је писана исто како deck.gl пише св
 ### Прављење
 
 ```bash
-npm pack deck.gl
+npm pack deck.gl@9.3.10
 ```
 
 ```bash
-tar -xzf deck.gl-*.tgz
+tar -xzf deck.gl-9.3.10.tgz
 ```
 
 ```bash
-node napravi-hex.js --deck ./package/dist.min.js
+curl -LO https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js
 ```
+
+```bash
+curl -LO https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css
+```
+
+```bash
+node napravi-hex.js --deck ./package/dist.min.js --maplibre ./maplibre-gl.js --maplibre-css ./maplibre-gl.css
+```
+
+Верзије су намерно закуцане. Без броја верзије `npm pack` повлачи најновију,
+па би исте улазне датотеке кроз пола године дале другачији резултат.
 
 `npm pack` преузима само тарбол, без стабла зависности — траје неколико
 секунди, док пуно `npm install deck.gl` овде није успело ни за десет минута.
@@ -52,6 +63,16 @@ node napravi-hex.js --deck ./package/dist.min.js
 
 Скрипта успут издваја напомене о лиценцама уграђених библиотека у
 `deck.gl-LICENSES.txt`, како то ради и webpack.
+
+### Зашто готови фајлови нису у репозиторијуму
+
+`hexagon-layer.html` је спој четири улаза наведена горе. Ниједан бајт у њему
+није настао ручно, па га чување у историји значи да се уз сваку измену дода
+још 2,4 MB који се могу добити за неколико секунди.
+
+У репозиторијуму се чува само оно што се не може извести из нечег другог:
+шаблон, апликација, генератор и ова скрипта. Библиотеке долазе са npm-а по
+закуцаној верзији. То је довољно да се фајл добије бајт по бајт исти.
 
 ### Пренос у deck.gl структуру
 
