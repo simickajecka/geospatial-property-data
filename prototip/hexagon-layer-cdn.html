@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Шестоугаона ценовна површина</title>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+
+<style>
+/* Изглед преузет из deck.gl примера 3d-heatmap (hexagon-layer):
+   тамна подлога, бела управљачка плоча горе лево, Helvetica.
+   Намерно један тамни свет — све боје су изричито постављене. */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+body {
+  background: #0e0e0e;
+  color: #ffffff;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Не постављати величину canvas-а из CSS-а: deck.gl сам рачуна и
+   ширину/висину елемента и позадинску меморију према величини контејнера.
+   Правило типа `canvas { inset: 0 }` му то поквари — платно остане на
+   подразумеваних 300×150 па се растегне и слика буде мутна. */
+#platno { position: fixed; inset: 0; background: #0e0e0e; }
+canvas { outline: none; }
+.maplibregl-ctrl-attrib { font-size: 10px; }
+
+/* --- управљачка плоча, по узору на deck.gl примере --- */
+/* Боје панела и облачића преузете са deck.gl странице:
+   подлога rgb(41,50,60), текст rgb(160,167,180). */
+#kontrole {
+  position: absolute; top: 0; right: 0; margin: 12px; padding: 16px 18px;
+  z-index: 2; background: rgb(41, 50, 60); color: rgb(160, 167, 180);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .45);
+  font-size: 12px; line-height: 1.5; width: 300px;
+  max-height: calc(100vh - 24px); overflow-y: auto;
+}
+#kontrole h1 { font-size: 13px; font-weight: bold; margin: 0 0 8px; color: #fff; }
+#kontrole .izvor { margin: 0 0 12px; font-size: 11.5px; }
+#kontrole .izvor b { color: #e8a33d; font-weight: bold; }
+
+.red-kontrole {
+  display: grid; grid-template-columns: 92px 1fr 48px;
+  align-items: center; gap: 8px; margin-bottom: 7px;
+}
+.red-kontrole label { color: rgb(160,167,180); }
+.red-kontrole .v {
+  text-align: right; font-variant-numeric: tabular-nums; color: #fff;
+}
+input[type=range] {
+  width: 100%; height: 18px; margin: 0; cursor: pointer; accent-color: #d1374e;
+}
+input[type=range]:focus-visible { outline: 2px solid #d1374e; outline-offset: 2px; }
+
+.crta { border: 0; border-top: 1px solid rgba(160,167,180,.25); margin: 13px 0 11px; }
+
+.vreme-red { display: grid; grid-template-columns: 64px 1fr auto; gap: 8px;
+             align-items: center; }
+#mesec { font-weight: bold; font-variant-numeric: tabular-nums; font-size: 13px; color: #fff; }
+button {
+  appearance: none; font: inherit; font-size: 11px;
+  background: rgba(255,255,255,.09); color: rgb(200,208,218);
+  border: 1px solid rgba(160,167,180,.3); padding: 4px 10px; cursor: pointer;
+}
+button:hover { background: rgba(255,255,255,.16); }
+button:focus-visible { outline: 2px solid #d1374e; outline-offset: 1px; }
+button.radi { background: #d1374e; border-color: #d1374e; color: #fff; }
+
+/* --- легенде --- */
+.naslovak { font-size: 11px; color: rgb(140,148,160); margin: 0 0 5px; }
+.traka { height: 12px; display: flex; }
+.traka i { flex: 1; }
+.osa { display: flex; justify-content: space-between; color: rgb(140,148,160);
+       font-size: 10.5px; margin-top: 3px; font-variant-numeric: tabular-nums; }
+.stubici { display: flex; align-items: flex-end; gap: 3px; height: 26px; margin-top: 2px; }
+.stubici i { flex: 1; background: rgb(120,130,145); }
+
+.brojka { display: flex; justify-content: space-between; margin-top: 3px; }
+.brojka span:last-child { font-variant-numeric: tabular-nums; font-weight: bold; color: #fff; }
+
+.napomena {
+  margin: 12px 0 0; padding: 7px 9px; background: rgba(224,168,56,.13);
+  color: #e0b464; border-left: 3px solid #e0a838; font-size: 11px; line-height: 1.45;
+}
+
+/* --- доњи наговештај, као у примеру --- */
+#nagovestaj {
+  position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+  z-index: 2; color: rgba(255, 255, 255, .58); font-size: 11.5px;
+  letter-spacing: .02em; pointer-events: none; text-align: center;
+}
+
+/* --- облачић --- */
+.opis {
+  background: rgba(0, 0, 0, .86); color: #fff; padding: 8px 11px;
+  font-size: 11.5px; line-height: 1.55; font-family: Helvetica, Arial, sans-serif;
+}
+.opis b { color: #fead54; }
+.opis .k { color: #9b9b9b; }
+
+#ucitavanje {
+  position: fixed; inset: 0; display: grid; place-items: center; z-index: 50;
+  background: #0e0e0e; color: #7a7a7a; font-size: 12px;
+}
+
+#greska {
+  display: none; position: fixed; left: 12px; right: 12px; bottom: 12px;
+  z-index: 60; background: #6d1f1f; color: #ffe4e0; padding: 12px 15px;
+  font-size: 12px; line-height: 1.5; max-height: 44vh; overflow-y: auto;
+  border-left: 4px solid #ff7a66;
+}
+#greska b { color: #ffb3a6; }
+
+@media (max-width: 640px) {
+  #kontrole { width: calc(100% - 24px); }
+  #nagovestaj { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition-duration: .01ms !important; } }
+</style>
+
+<div id="platno"></div>
+<div id="ucitavanje">рачунам мрежу и 96 месеци…</div>
+<div id="greska" role="alert"></div>
+
+<div id="kontrole">
+  <h1>Цена стана од 50 m² у Србији, 2019–2026</h1>
+  <p class="izvor">
+    Висина носи индекс кретања (01/2019 = 1), боја носи цену по m².<br>
+    <b>СИНТЕТИЧКИ ПОДАЦИ</b>
+  </p>
+
+  <div class="red-kontrole">
+    <label for="radijus">Пречник</label>
+    <input type="range" id="radijus" min="500" max="20000" step="100" value="2000">
+    <span class="v" id="radijus-v">2000</span>
+  </div>
+  <div class="red-kontrole">
+    <label for="pokrivenost">Попуњеност</label>
+    <input type="range" id="pokrivenost" min="0" max="1" step="0.1" value="0.7">
+    <span class="v" id="pokrivenost-v">0,70</span>
+  </div>
+  <div class="red-kontrole">
+    <label for="percentil">Горњи перцентил</label>
+    <input type="range" id="percentil" min="80" max="100" step="0.1" value="100">
+    <span class="v" id="percentil-v">100</span>
+  </div>
+  <div class="red-kontrole">
+    <label for="visina">Висина</label>
+    <input type="range" id="visina" min="5" max="220" step="5" value="50">
+    <span class="v" id="visina-v">50</span>
+  </div>
+
+  <hr class="crta">
+
+  <div class="vreme-red">
+    <span id="mesec">2026-12</span>
+    <input type="range" id="klizac" min="0" max="95" value="95" step="1" aria-label="Месец">
+    <button id="pusti">▶ Пусти</button>
+  </div>
+
+  <hr class="crta">
+
+  <p class="naslovak">Боја — цена по m²</p>
+  <div class="traka">
+    <i style="background:rgb(1,152,189)"></i>
+    <i style="background:rgb(73,227,206)"></i>
+    <i style="background:rgb(216,254,181)"></i>
+    <i style="background:rgb(254,237,177)"></i>
+    <i style="background:rgb(254,173,84)"></i>
+    <i style="background:rgb(209,55,78)"></i>
+  </div>
+  <div class="osa"><span>1000 €</span><span>2700 €</span></div>
+
+  <p class="naslovak" style="margin-top:12px">Висина — индекс</p>
+  <div class="stubici">
+    <i style="height:14%"></i><i style="height:31%"></i><i style="height:48%"></i>
+    <i style="height:65%"></i><i style="height:83%"></i><i style="height:100%"></i>
+  </div>
+  <div class="osa"><span>1,00</span><span>2,20</span></div>
+
+  <hr class="crta">
+
+  <div class="brojka"><span>Просечна цена</span><span id="prosek">—</span></div>
+  <div class="brojka"><span>Највећи раст</span><span id="najveci">—</span></div>
+  <div class="brojka"><span>Тачака мреже</span><span id="tacaka">—</span></div>
+  <p style="margin:8px 0 0;font-size:10.5px;color:rgb(120,128,140)" id="stanje-podloge">подлога карте: учитавам…</p>
+
+  <p class="napomena">
+    Уочите колико ниских ћелија нестане иза високих. Зато 3Д никад не треба
+    да буде једини приказ, него додатак равној карти.
+  </p>
+</div>
+
+<div id="nagovestaj">Држите Shift и вуците мишем за ротацију</div>
+
+<script>(function(){
+var module = { exports: {} };
+/*
+ * generator.js — sinteticke cene stana od 50 m2 na mrezi tacaka nad Srbijom,
+ * mesecno od januara 2019. do decembra 2026.
+ *
+ * Isti fajl se koristi i iz Node-a (generisi.js) i ugradjen u web prikaz,
+ * da se logika ne bi razisla na dva mesta.
+ *
+ * VAZNO: podaci su sinteticki. Ne koriste se ni za kakvu procenu vrednosti.
+ */
+
+// ---------------------------------------------------------------- PRNG
+
+// mulberry32 — determinisan, brz, dovoljno dobar za sintetiku
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// normalna raspodela preko Box-Muller
+function gauss(rand) {
+  let u = 0, v = 0;
+  while (u === 0) u = rand();
+  while (v === 0) v = rand();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+// ------------------------------------------------------- projekcija
+
+// Ekvidistantna cilindricna projekcija oko lat0 — mreza je pravilna u km.
+// Izoblicenje preko Srbije je oko 3.5%, sto je za sinteticki prikaz prihvatljivo.
+// Za stvarne podatke koristiti zvanicni CRS (UTM 34N).
+const LAT0 = 44.0;
+const KM_PO_STEPENU_LAT = 111.13;
+const KM_PO_STEPENU_LON = 111.320 * Math.cos(LAT0 * Math.PI / 180);
+
+function lonLatUKm(lon, lat) {
+  return [lon * KM_PO_STEPENU_LON, lat * KM_PO_STEPENU_LAT];
+}
+function kmULonLat(x, y) {
+  return [x / KM_PO_STEPENU_LON, y / KM_PO_STEPENU_LAT];
+}
+
+// ------------------------------------------------------- granica
+
+// PRIBLIZNA kontura, iskljucivo za demonstraciju rasporeda tacaka.
+// Zameniti zvanicnom granicom iz GeoSrbije pre bilo kakve stvarne upotrebe.
+const GRANICA_PRIBLIZNA = [
+  [20.15, 46.18], [20.60, 46.14], [20.78, 45.75], [21.10, 45.55],
+  [21.52, 45.20], [21.44, 44.87], [21.72, 44.68], [22.30, 44.63],
+  [22.70, 44.55], [22.45, 44.20], [22.68, 43.85], [22.98, 43.72],
+  [22.62, 43.42], [22.98, 43.18], [22.55, 42.88], [22.34, 42.35],
+  [21.90, 42.32], [21.58, 42.25], [21.30, 42.14], [20.75, 41.86],
+  [20.52, 42.22], [20.35, 42.85], [19.98, 43.10], [19.65, 43.22],
+  [19.20, 43.55], [19.42, 44.06], [19.10, 44.32], [19.38, 44.88],
+  [19.00, 45.14], [19.12, 45.52], [18.85, 45.90], [19.06, 45.96],
+  [19.42, 46.14]
+];
+
+function uPoligonu(lon, lat, poly) {
+  let unutra = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const xi = poly[i][0], yi = poly[i][1];
+    const xj = poly[j][0], yj = poly[j][1];
+    const sece = (yi > lat) !== (yj > lat) &&
+      lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi;
+    if (sece) unutra = !unutra;
+  }
+  return unutra;
+}
+
+// ------------------------------------------------------- gradovi
+
+// lon, lat, tezina (koliko podize cenu), domet u km
+const GRADOVI = [
+  ['Beograd',      20.457, 44.787, 1.00, 26],
+  ['Novi Sad',     19.833, 45.267, 0.78, 17],
+  ['Nis',          21.896, 43.321, 0.58, 14],
+  ['Kragujevac',   20.917, 44.017, 0.50, 12],
+  ['Subotica',     19.665, 46.100, 0.42, 11],
+  ['Zlatibor',     19.700, 43.730, 0.62,  9],   // turisticka premija
+  ['Kopaonik',     20.800, 43.280, 0.60,  7],   // turisticka premija
+  ['Cacak',        20.350, 43.891, 0.40, 10],
+  ['Kraljevo',     20.690, 43.723, 0.38, 10],
+  ['Novi Pazar',   20.515, 43.137, 0.36, 10],
+  ['Pancevo',      20.640, 44.870, 0.40,  9],
+  ['Zrenjanin',    20.390, 45.383, 0.36, 10],
+  ['Sabac',        19.690, 44.754, 0.36,  9],
+  ['Uzice',        19.849, 43.858, 0.38, 10],
+  ['Valjevo',      19.890, 44.270, 0.35,  9],
+  ['Smederevo',    20.930, 44.663, 0.35,  9],
+  ['Leskovac',     21.946, 42.998, 0.32, 10],
+  ['Vranje',       21.900, 42.551, 0.30,  9],
+  ['Sombor',       19.114, 45.774, 0.30,  9],
+  ['Sremska Mitrovica', 19.612, 44.977, 0.32, 8]
+];
+
+// ------------------------------------------------------- sum
+
+// Visestruko-oktavni value noise na pravilnoj resetki, bilinearno uzorkovan.
+function napraviSum(seed, oktave, osnovnaCelija) {
+  const slojevi = [];
+  for (let o = 0; o < oktave; o++) {
+    slojevi.push({
+      korak: osnovnaCelija / Math.pow(2, o),   // u km
+      seme: (seed + o * 7919) | 0,
+      kes: new Map(),
+      amp: Math.pow(0.5, o)
+    });
+  }
+  function vrednostResetke(sloj, i, j) {
+    const kljuc = i * 100000 + j;
+    let v = sloj.kes.get(kljuc);
+    if (v === undefined) {
+      // deterministicki po (i, j, sloj), nezavisno od redosleda poziva
+      v = mulberry32(((i * 73856093) ^ (j * 19349663) ^ sloj.seme) | 0)();
+      sloj.kes.set(kljuc, v);
+    }
+    return v;
+  }
+  return function (x, y) {
+    let zbir = 0, ukupnaAmp = 0;
+    for (const sloj of slojevi) {
+      const gx = x / sloj.korak, gy = y / sloj.korak;
+      const i = Math.floor(gx), j = Math.floor(gy);
+      const fx = gx - i, fy = gy - j;
+      const sx = fx * fx * (3 - 2 * fx);   // smoothstep
+      const sy = fy * fy * (3 - 2 * fy);
+      const v00 = vrednostResetke(sloj, i, j);
+      const v10 = vrednostResetke(sloj, i + 1, j);
+      const v01 = vrednostResetke(sloj, i, j + 1);
+      const v11 = vrednostResetke(sloj, i + 1, j + 1);
+      const gore = v00 + (v10 - v00) * sx;
+      const dole = v01 + (v11 - v01) * sx;
+      zbir += (gore + (dole - gore) * sy) * sloj.amp;
+      ukupnaAmp += sloj.amp;
+    }
+    return zbir / ukupnaAmp;   // 0..1
+  };
+}
+
+// ------------------------------------------------------- mreza
+
+function napraviMrezu(korakKm, granica) {
+  const poly = granica || GRANICA_PRIBLIZNA;
+  let minLon = 180, maxLon = -180, minLat = 90, maxLat = -90;
+  for (const [lo, la] of poly) {
+    if (lo < minLon) minLon = lo;
+    if (lo > maxLon) maxLon = lo;
+    if (la < minLat) minLat = la;
+    if (la > maxLat) maxLat = la;
+  }
+  const [x0, y0] = lonLatUKm(minLon, minLat);
+  const [x1, y1] = lonLatUKm(maxLon, maxLat);
+  const nx = Math.ceil((x1 - x0) / korakKm);
+  const ny = Math.ceil((y1 - y0) / korakKm);
+
+  const lon = [], lat = [], gx = [], gy = [];
+  for (let j = 0; j < ny; j++) {
+    for (let i = 0; i < nx; i++) {
+      const x = x0 + (i + 0.5) * korakKm;
+      const y = y0 + (j + 0.5) * korakKm;
+      const [lo, la] = kmULonLat(x, y);
+      if (!uPoligonu(lo, la, poly)) continue;
+      lon.push(lo); lat.push(la); gx.push(i); gy.push(j);
+    }
+  }
+  return {
+    korakKm, nx, ny, x0, y0,
+    minLon, maxLon, minLat, maxLat,
+    n: lon.length,
+    lon: Float64Array.from(lon),
+    lat: Float64Array.from(lat),
+    gx: Int32Array.from(gx),
+    gy: Int32Array.from(gy)
+  };
+}
+
+// ------------------------------------------------------- osnovna cena
+
+function osnovnaCena(mreza, opcije) {
+  const o = Object.assign({ min: 1000, max: 1850, seed: 20260826 }, opcije);
+  const sum = napraviSum(o.seed, 4, 90);
+  const sirovo = new Float32Array(mreza.n);
+  let vmin = Infinity, vmax = -Infinity;
+
+  for (let k = 0; k < mreza.n; k++) {
+    const [x, y] = lonLatUKm(mreza.lon[k], mreza.lat[k]);
+    let gradSkor = 0;
+    for (const [, glon, glat, tezina, domet] of GRADOVI) {
+      const [cx, cy] = lonLatUKm(glon, glat);
+      const d = Math.hypot(x - cx, y - cy);
+      gradSkor += tezina * Math.exp(-d / domet);
+    }
+    // spajanje gradskog uticaja i teksture terena
+    const v = 0.68 * Math.min(gradSkor, 1.35) / 1.35 + 0.32 * sum(x, y);
+    sirovo[k] = v;
+    if (v < vmin) vmin = v;
+    if (v > vmax) vmax = v;
+  }
+
+  const cena = new Float32Array(mreza.n);
+  const raspon = vmax - vmin || 1;
+  for (let k = 0; k < mreza.n; k++) {
+    // vmin/vmax su racunati iz float64 vrednosti, a sirovo[] je float32 —
+    // razlika u zaokruzivanju moze dati mali minus, a Math.pow(minus, 1.45) je NaN.
+    const t = Math.max(0, Math.min(1, (sirovo[k] - vmin) / raspon));
+    cena[k] = o.min + (o.max - o.min) * Math.pow(t, 1.45);   // gamma: malo skupih zona
+  }
+  return cena;
+}
+
+// ------------------------------------------------------- vreme
+
+const GODINE = [2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
+// prosecan godisnji rast na nivou drzave
+const GODISNJI_RAST = {
+  2019: 0.050, 2020: 0.030, 2021: 0.090, 2022: 0.140,
+  2023: 0.105, 2024: 0.060, 2025: 0.045, 2026: 0.040
+};
+const BROJ_MESECI = GODINE.length * 12;   // 96
+
+function oznakeMeseci() {
+  const out = [];
+  for (const g of GODINE) {
+    for (let m = 1; m <= 12; m++) {
+      out.push(g + '-' + String(m).padStart(2, '0'));
+    }
+  }
+  return out;
+}
+
+/*
+ * Indeks kretanja cene po celiji: index[celija][mesec], index = 1.0 u 01/2019.
+ * Rast se prostorno razlikuje (negde brze, negde sporije), pa mapa trenda
+ * ne izgleda isto kao mapa nivoa cena — to je i poenta.
+ */
+function faktorRasta(mreza, opcije) {
+  const o = Object.assign({ seed: 777001 }, opcije);
+  const sum = napraviSum(o.seed, 3, 120);
+  const f = new Float32Array(mreza.n);
+  for (let k = 0; k < mreza.n; k++) {
+    const [x, y] = lonLatUKm(mreza.lon[k], mreza.lat[k]);
+    f[k] = 0.45 + 1.15 * sum(x, y);   // mnozilac nacionalnog rasta: 0.45 .. 1.60
+  }
+  return f;
+}
+
+// sezonska komponenta — ne akumulira se, samo talasa oko trenda
+function sezona(mesecUGodini) {
+  return 1 + 0.008 * Math.sin((mesecUGodini - 3) / 12 * 2 * Math.PI);
+}
+
+/*
+ * Racuna ceo niz cena. Vraca funkciju koja za dati mesec vraca Float32Array
+ * cena po celiji — da se ne bi drzalo svih 34 miliona vrednosti u memoriji.
+ */
+function napraviSeriju(mreza, opcije) {
+  const o = Object.assign({
+    min: 1000, max: 3000, seed: 20260826,
+    // 'opseg'  — ceo niz 2019-2026 staje u [min, max] (doslovno po specifikaciji)
+    // 'realno' — bazna 01/2019 zauzima [min, max], rast ide preko toga
+    rezim: 'opseg'
+  }, opcije);
+
+  const rast = faktorRasta(mreza, { seed: o.seed + 991 });
+  const meseci = oznakeMeseci();
+
+  // Deterministicki najveci indeks na kraju perioda (bez suma), da bazna
+  // skala bude tako postavljena da se kasnije nista ne odseca.
+  let maxRast = 0;
+  for (let k = 0; k < mreza.n; k++) if (rast[k] > maxRast) maxRast = rast[k];
+  let maxIndeks = 1;
+  for (let t = 1; t < meseci.length; t++) {
+    const g = GODINE[Math.floor(t / 12)];
+    maxIndeks *= (1 + (Math.pow(1 + GODISNJI_RAST[g], 1 / 12) - 1) * maxRast);
+  }
+  const baznaMax = o.rezim === 'realno'
+    ? o.max
+    : o.min + (o.max / (maxIndeks * 1.03) - o.min);   // 3% rezerve za AR(1) sum
+
+  const baza = osnovnaCena(mreza, { min: o.min, max: baznaMax, seed: o.seed });
+  const gornjaGranica = o.rezim === 'realno' ? Infinity : o.max;
+
+  // AR(1) sum po celiji, determinisan po celiji
+  const sumStanje = new Float32Array(mreza.n);
+  const randPoCeliji = [];
+  for (let k = 0; k < mreza.n; k++) randPoCeliji.push(mulberry32(o.seed + 13 * k + 5));
+
+  const indeks = new Float32Array(mreza.n).fill(1.0);   // 01/2019 = 1.0
+
+  let odsecenih = 0;
+
+  return {
+    baza, rast, meseci, brojMeseci: meseci.length, baznaMax, rezim: o.rezim,
+    get brojOdsecenih() { return odsecenih; },
+    /* Poziva se redom, mesec po mesec, od indeksa 0. */
+    sledeciMesec(t) {
+      const godina = GODINE[Math.floor(t / 12)];
+      const uGodini = (t % 12) + 1;
+      const nacionalniMesecni = Math.pow(1 + GODISNJI_RAST[godina], 1 / 12) - 1;
+
+      const cene = new Float32Array(mreza.n);
+      const indeksKopija = new Float32Array(mreza.n);
+      for (let k = 0; k < mreza.n; k++) {
+        if (t > 0) {
+          sumStanje[k] = 0.6 * sumStanje[k] + 0.4 * gauss(randPoCeliji[k]) * 0.006;
+          indeks[k] *= (1 + nacionalniMesecni * rast[k]);
+        }
+        const v = baza[k] * indeks[k] * sezona(uGodini) * (1 + sumStanje[k]);
+        if (v > gornjaGranica || v < o.min) odsecenih++;
+        cene[k] = Math.max(o.min, Math.min(gornjaGranica, v));
+        indeksKopija[k] = indeks[k];
+      }
+      return { cene, indeks: indeksKopija, oznaka: meseci[t] };
+    }
+  };
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    mulberry32, napraviMrezu, osnovnaCena, faktorRasta, napraviSeriju,
+    oznakeMeseci, BROJ_MESECI, GODINE, GRADOVI, GRANICA_PRIBLIZNA,
+    lonLatUKm, kmULonLat, uPoligonu, napraviSum
+  };
+}
+
+window.G = module.exports;
+})();</script>
+<script src="https://unpkg.com/deck.gl@9.3.10/dist.min.js"></script>
+<script>/* deck.gl HexagonLayer над синтетичком ценовном површином Србије.
+   Висина шестоугла = индекс (01/2019 = 1), боја = цена по m².
+
+   Палета, материјал, светло и угао камере преузети су из званичног
+   deck.gl примера 3d-heatmap (deck.gl/examples/hexagon-layer), да би
+   приказ изгледао исто. Генератор долази из generator/generator.js. */
+"use strict";
+
+/* ---------- видљиво пријављивање грешака ----------
+   Без овога свака грешка нестане у конзоли и страница само „не ради“.
+   Сваки квар се исписује преко екрана, да се одмах види шта је. */
+
+let brojGresaka = 0;
+
+function prijavi(sta, greska, mesto) {
+  const p = document.getElementById("greska");
+  if (!p) return;
+  if (++brojGresaka > 8) return;          // не затрпавај екран истом грешком
+
+  const poruka = greska && greska.message ? greska.message : String(greska);
+  const stek = greska && greska.stack
+    ? String(greska.stack).split("\n").slice(1, 3).join("\n")
+    : (mesto || "");
+
+  const bezbedno = (s) => String(s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  p.style.display = "block";
+  p.innerHTML +=
+    "<b>" + bezbedno(sta) + "</b><br>" + bezbedno(poruka) +
+    (stek ? '<br><span style="opacity:.7;font-size:11px">' +
+            bezbedno(stek) + "</span>" : "") + "<br><br>";
+
+  const u = document.getElementById("ucitavanje");
+  if (u) u.remove();
+}
+
+window.addEventListener("error", e =>
+  prijavi("Грешка у скрипти", e.error || e.message,
+          e.filename ? e.filename + ":" + e.lineno + ":" + e.colno : ""));
+window.addEventListener("unhandledrejection", e => prijavi("Неухваћена грешка", e.reason));
+
+if (typeof deck === "undefined") {
+  prijavi("deck.gl није учитан",
+    "Библиотека није доступна. Ако сте отворили CDN варијанту, " +
+    "мрежа вероватно не пропушта unpkg.com. Отворите hexagon-layer.html, " +
+    "у њој је deck.gl уграђен у сам фајл.");
+  throw new Error("deck.gl nije ucitan");
+}
+
+const { DeckGL, HexagonLayer, PathLayer,
+        LightingEffect, AmbientLight, PointLight } = deck;
+
+const KORAK_KM = 1.5;
+const MESECI = G.oznakeMeseci();
+const M = MESECI.length;
+
+const CENA_MIN = 1000, CENA_MAX = 2700;
+const IND_MIN = 1.0,  IND_MAX = 2.2;
+
+/* Иста палета као у deck.gl примеру */
+const PALETA = [
+  [  1, 152, 189],
+  [ 73, 227, 206],
+  [216, 254, 181],
+  [254, 237, 177],
+  [254, 173,  84],
+  [209,  55,  78]
+];
+
+/* Исти материјал као у примеру */
+const MATERIJAL = {
+  ambient: 0.64,
+  diffuse: 0.6,
+  shininess: 32,
+  specularColor: [51, 51, 51]
+};
+
+let D = null, tacke = null, t = M - 1, animacija = null;
+let poluprecnik = 2000, pokrivenost = 0.7, percentil = 100, visinaSkala = 50;
+
+/* ---------- подаци ---------- */
+
+function pripremi() {
+  const mreza = G.napraviMrezu(KORAK_KM);
+  const serija = G.napraviSeriju(mreza);
+  const n = mreza.n;
+  const cene = new Uint16Array(n * M);
+  const indeks = new Float32Array(n * M);
+  for (let i = 0; i < M; i++) {
+    const r = serija.sledeciMesec(i);
+    for (let k = 0; k < n; k++) {
+      cene[i * n + k] = Math.round(r.cene[k]);
+      indeks[i * n + k] = r.indeks[k];
+    }
+  }
+  D = { mreza, n, cene, indeks };
+
+  tacke = new Array(n);
+  for (let k = 0; k < n; k++) {
+    tacke[k] = { position: [mreza.lon[k], mreza.lat[k]], cena: 0, indeks: 1 };
+  }
+  primeniMesec(t);
+}
+
+function primeniMesec(i) {
+  const off = i * D.n;
+  for (let k = 0; k < D.n; k++) {
+    tacke[k].cena = D.cene[off + k];
+    tacke[k].indeks = D.indeks[off + k];
+  }
+}
+
+/* ---------- слојеви ---------- */
+
+const putanjaGranice = [...G.GRANICA_PRIBLIZNA, G.GRANICA_PRIBLIZNA[0]];
+
+function slojevi() {
+  return [
+    new PathLayer({
+      id: "granica",
+      data: [{ path: putanjaGranice }],
+      getPath: d => d.path,
+      getColor: [86, 96, 102, 200],
+      getWidth: 1,
+      widthUnits: "pixels",
+      parameters: { depthTest: false }
+    }),
+    new HexagonLayer({
+      id: "hex",
+      data: tacke,
+      getPosition: d => d.position,
+
+      gpuAggregation: true,
+      radius: poluprecnik,
+      coverage: pokrivenost,
+      upperPercentile: percentil,
+      extruded: true,
+
+      /* боја носи цену */
+      colorAggregation: "MEAN",
+      getColorWeight: d => d.cena,
+      colorRange: PALETA,
+      colorDomain: [CENA_MIN, CENA_MAX],
+
+      /* висина носи индекс — исти опсег и размера као у примеру */
+      elevationAggregation: "MEAN",
+      getElevationWeight: d => d.indeks,
+      elevationDomain: [IND_MIN, IND_MAX],
+      elevationRange: [0, 3000],
+      elevationScale: visinaSkala,
+
+      material: MATERIJAL,
+      pickable: true,
+      updateTriggers: {
+        getColorWeight: t,
+        getElevationWeight: t
+      },
+      transitions: { elevationScale: 3000 }
+    })
+  ];
+}
+
+/* ---------- светло ---------- */
+
+/* Као у примеру: једно амбијентално и два тачкаста светла,
+   само су положаји померени изнад Србије уместо изнад Британије. */
+const svetlo = new LightingEffect({
+  ambientLight: new AmbientLight({ color: [255, 255, 255], intensity: 1.0 }),
+  pointLight1: new PointLight({
+    color: [255, 255, 255], intensity: 0.8, position: [19.9, 42.6, 80000]
+  }),
+  pointLight2: new PointLight({
+    color: [255, 255, 255], intensity: 0.8, position: [21.6, 45.6, 8000]
+  })
+});
+
+/* ---------- deck ---------- */
+
+/* Нагиб и заокрет исти као у примеру; средиште и зум подешени за Србију. */
+const POCETNI_POGLED = {
+  longitude: 20.85, latitude: 43.55, zoom: 6.6,
+  minZoom: 5, maxZoom: 15, pitch: 40.5, bearing: -27
+};
+
+/* Иста подлога коју користи deck.gl пример. Тражи мрежу — тајлови стижу
+   са tiles.basemaps.cartocdn.com. Ако не прође, приказ ради и без ње. */
+const PODLOGA = "https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json";
+const imaPodlogu = typeof maplibregl !== "undefined";
+if (!imaPodlogu) {
+  const n = document.getElementById("stanje-podloge");
+  if (n) n.textContent = "подлога карте: библиотека није учитана";
+}
+
+const dek = new DeckGL(Object.assign({
+  container: "platno",
+
+  /* Не држати поглед као контролисано стање: тада свако померање мора
+     ручно да се врати кроз setProps, а ако то омане, ротација и зум
+     престају да раде. Пример користи initialViewState — и ми тако. */
+  initialViewState: POCETNI_POGLED,
+  controller: true,
+
+  effects: [svetlo],
+  layers: [],
+}, imaPodlogu ? { map: maplibregl, mapStyle: PODLOGA } : {}, {
+  /* Враћамо обичан текст, не HTML — тада deck.gl примени свој
+     подразумевани изглед облачића, исти као на њиховој страници.
+
+     Пажња на облик објекта у deck.gl 9: има col, row, colorValue,
+     elevationValue и count. Нема `points` (то је само уз агрегацију на
+     процесору), а `position` уме да да бесмислене вредности — и њихов
+     пример га зато штити са Number.isFinite. Поузданија је info.coordinate. */
+  getTooltip: (info) => {
+    try {
+      const o = info && info.object;
+      if (!o) return null;
+      const k = info.coordinate;
+      const cena = Number.isFinite(o.colorValue) ? Math.round(o.colorValue) : null;
+      const ind = Number.isFinite(o.elevationValue) ? o.elevationValue : null;
+
+      return [
+        k && k.length === 2 ? "ширина: " + k[1].toFixed(6) : null,
+        k && k.length === 2 ? "дужина: " + k[0].toFixed(6) : null,
+        cena !== null ? cena + " €/m²" : null,
+        ind !== null ? "индекс " + ind.toFixed(3).replace(".", ",") +
+                       "  (+" + Math.round((ind - 1) * 100) + " %)" : null,
+        Number.isFinite(o.count) ? o.count + " тачака мреже" : null
+      ].filter(Boolean).join("\n");
+    } catch (e) {
+      prijavi("Облачић", e);
+      return null;
+    }
+  }
+}));
+
+/* ---------- управљање ---------- */
+
+function osvezi() {
+  dek.setProps({ layers: slojevi() });
+  document.getElementById("mesec").textContent = MESECI[t];
+  const off = t * D.n;
+  let zbir = 0, imax = 0;
+  for (let k = 0; k < D.n; k++) {
+    zbir += D.cene[off + k];
+    if (D.indeks[off + k] > imax) imax = D.indeks[off + k];
+  }
+  document.getElementById("prosek").textContent = Math.round(zbir / D.n) + " €";
+  document.getElementById("najveci").textContent =
+    "+" + Math.round((imax - 1) * 100) + " %";
+}
+
+function veziKlizac(id, naStanje, prikaz) {
+  const el = document.getElementById(id);
+  const izlaz = document.getElementById(id + "-v");
+  el.addEventListener("input", e => {
+    naStanje(+e.target.value);
+    izlaz.textContent = prikaz(+e.target.value);
+    osvezi();
+  });
+  izlaz.textContent = prikaz(+el.value);
+}
+
+veziKlizac("radijus",     v => poluprecnik = v,  v => v);
+veziKlizac("pokrivenost", v => pokrivenost = v,  v => v.toFixed(2).replace(".", ","));
+veziKlizac("percentil",   v => percentil = v,    v => v);
+veziKlizac("visina",      v => visinaSkala = v,  v => v);
+
+document.getElementById("klizac").addEventListener("input", e => {
+  t = +e.target.value; primeniMesec(t); osvezi();
+});
+
+const dugme = document.getElementById("pusti");
+dugme.addEventListener("click", () => {
+  if (animacija) {
+    clearInterval(animacija); animacija = null;
+    dugme.textContent = "▶ Пусти"; dugme.classList.remove("radi");
+  } else {
+    dugme.textContent = "⏸ Стани"; dugme.classList.add("radi");
+    animacija = setInterval(() => {
+      t = (t + 1) % M;
+      document.getElementById("klizac").value = t;
+      primeniMesec(t); osvezi();
+    }, 130);
+  }
+});
+
+/* ---------- покретање ---------- */
+
+/* Не користити requestAnimationFrame: у картици која није видљива он се
+   не извршава, па се страница никад не иницијализује. */
+setTimeout(() => {
+  try {
+    pripremi();
+    document.getElementById("klizac").value = t;
+    osvezi();
+    const u = document.getElementById("ucitavanje");
+    if (u) u.remove();
+    document.getElementById("tacaka").textContent = D.n.toLocaleString("sr-RS");
+  } catch (e) {
+    prijavi("Рачунање података није успело", e);
+  }
+}, 0);
+
+/* Стање подлоге пратимо преко догађаја саме карте, не на истек времена —
+   иначе се пријави квар и кад подлога само још учитава. */
+if (imaPodlogu) {
+  const n = document.getElementById("stanje-podloge");
+  const javi = (txt) => { if (n) n.textContent = "подлога карте: " + txt; };
+  try {
+    const m = dek.getMapboxMap ? dek.getMapboxMap() : null;
+    if (!m) {
+      javi("није направљена");
+    } else {
+      m.on("load", () => javi("учитана"));
+      m.on("error", (e) => {
+        const p = e && e.error && e.error.message ? e.error.message : "неуспех";
+        javi("не стиже — " + p);
+      });
+    }
+  } catch (e) {
+    javi("непознато стање");
+  }
+}
+</script>
+
+</html>
