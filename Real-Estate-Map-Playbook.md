@@ -1,5 +1,7 @@
 # Real-Estate Map Playbook
 
+**Jelica Simić**
+
 How to turn a wide CSV of properties into a map people can actually reason with — the reference
 sites worth copying, the encodings that work, the pipeline, and the traps.
 
