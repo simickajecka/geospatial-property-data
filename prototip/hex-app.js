@@ -1,10 +1,13 @@
-/* Апликација: deck.gl HexagonLayer над синтетичком ценовном површином.
-   Висина шестоугла = индекс (2019 = 1), боја = цена по m².
-   Генератор долази из generator/generator.js, угради га napravi-hex.js. */
+/* deck.gl HexagonLayer над синтетичком ценовном површином Србије.
+   Висина шестоугла = индекс (01/2019 = 1), боја = цена по m².
+
+   Палета, материјал, светло и угао камере преузети су из званичног
+   deck.gl примера 3d-heatmap (deck.gl/examples/hexagon-layer), да би
+   приказ изгледао исто. Генератор долази из generator/generator.js. */
 "use strict";
 
-const { DeckGL, HexagonLayer, PathLayer, TextLayer,
-        LightingEffect, AmbientLight, DirectionalLight } = deck;
+const { DeckGL, HexagonLayer, PathLayer,
+        LightingEffect, AmbientLight, PointLight } = deck;
 
 const KORAK_KM = 2.5;
 const MESECI = G.oznakeMeseci();
@@ -13,14 +16,26 @@ const M = MESECI.length;
 const CENA_MIN = 1000, CENA_MAX = 2700;
 const IND_MIN = 1.0,  IND_MAX = 2.2;
 
-/* magma, шест корака — deck.gl очекује низ [r,g,b] */
+/* Иста палета као у deck.gl примеру */
 const PALETA = [
-  [ 12,   9,  40], [ 65,  20, 110], [130,  37, 129],
-  [201,  59, 112], [246, 122,  93], [252, 205, 138]
+  [  1, 152, 189],
+  [ 73, 227, 206],
+  [216, 254, 181],
+  [254, 237, 177],
+  [254, 173,  84],
+  [209,  55,  78]
 ];
 
+/* Исти материјал као у примеру */
+const MATERIJAL = {
+  ambient: 0.64,
+  diffuse: 0.6,
+  shininess: 32,
+  specularColor: [51, 51, 51]
+};
+
 let D = null, tacke = null, t = M - 1, animacija = null;
-let visinaSkala = 3800, poluprecnik = 6000;
+let poluprecnik = 6000, pokrivenost = 0.85, percentil = 100, visinaSkala = 50;
 
 /* ---------- подаци ---------- */
 
@@ -32,8 +47,10 @@ function pripremi() {
   const indeks = new Float32Array(n * M);
   for (let i = 0; i < M; i++) {
     const r = serija.sledeciMesec(i);
-    cene.set(r.cene.map(Math.round), i * n);
-    for (let k = 0; k < n; k++) indeks[i * n + k] = r.indeks[k];
+    for (let k = 0; k < n; k++) {
+      cene[i * n + k] = Math.round(r.cene[k]);
+      indeks[i * n + k] = r.indeks[k];
+    }
   }
   D = { mreza, n, cene, indeks };
 
@@ -62,8 +79,8 @@ function slojevi() {
       id: "granica",
       data: [{ path: putanjaGranice }],
       getPath: d => d.path,
-      getColor: [125, 148, 158, 190],
-      getWidth: 1.5,
+      getColor: [86, 96, 102, 200],
+      getWidth: 1,
       widthUnits: "pixels",
       parameters: { depthTest: false }
     }),
@@ -71,9 +88,11 @@ function slojevi() {
       id: "hex",
       data: tacke,
       getPosition: d => d.position,
+
       radius: poluprecnik,
+      coverage: pokrivenost,
+      upperPercentile: percentil,
       extruded: true,
-      elevationScale: visinaSkala,
 
       /* боја носи цену */
       colorAggregation: "MEAN",
@@ -81,67 +100,45 @@ function slojevi() {
       colorRange: PALETA,
       colorDomain: [CENA_MIN, CENA_MAX],
 
-      /* висина носи индекс */
+      /* висина носи индекс — исти опсег и размера као у примеру */
       elevationAggregation: "MEAN",
       getElevationWeight: d => d.indeks,
       elevationDomain: [IND_MIN, IND_MAX],
-      elevationRange: [0, 1],
+      elevationRange: [0, 3000],
+      elevationScale: visinaSkala,
 
+      material: MATERIJAL,
       pickable: true,
-      opacity: 0.94,
-      material: { ambient: 0.55, diffuse: 0.62, shininess: 40,
-                  specularColor: [70, 78, 84] },
       updateTriggers: {
         getColorWeight: t,
         getElevationWeight: t
       },
-      transitions: { elevationScale: 220 }
-    }),
-    new TextLayer({
-      id: "gradovi",
-      data: G.GRADOVI
-        .filter(g => ["Beograd","Novi Sad","Nis","Kragujevac","Subotica","Uzice","Vranje"]
-          .indexOf(g[0]) > -1)
-        .map(g => ({ ime: NAZIVI[g[0]] || g[0], position: [g[1], g[2]] })),
-      getPosition: d => d.position,
-      getText: d => d.ime,
-      getSize: 12,
-      getColor: [232, 240, 243, 225],
-      getPixelOffset: [0, -6],
-      fontFamily: '"IBM Plex Sans", sans-serif',
-      characterSet: "auto",
-      outlineWidth: 3,
-      outlineColor: [10, 18, 22, 255],
-      fontSettings: { sdf: true },
-      billboard: true,
-      parameters: { depthTest: false }
+      transitions: { elevationScale: 3000 }
     })
   ];
 }
 
-const NAZIVI = {
-  "Beograd": "Београд", "Novi Sad": "Нови Сад", "Nis": "Ниш",
-  "Kragujevac": "Крагујевац", "Subotica": "Суботица",
-  "Uzice": "Ужице", "Vranje": "Врање"
-};
+/* ---------- светло ---------- */
 
-/* ---------- deck ---------- */
-
+/* Као у примеру: једно амбијентално и два тачкаста светла,
+   само су положаји померени изнад Србије уместо изнад Британије. */
 const svetlo = new LightingEffect({
-  ambient: new AmbientLight({ color: [255, 255, 255], intensity: 1.05 }),
-  glavno: new DirectionalLight({
-    color: [255, 250, 240], intensity: 1.5, direction: [-1.2, -3, -1]
+  ambientLight: new AmbientLight({ color: [255, 255, 255], intensity: 1.0 }),
+  pointLight1: new PointLight({
+    color: [255, 255, 255], intensity: 0.8, position: [19.9, 42.6, 80000]
   }),
-  dopunsko: new DirectionalLight({
-    color: [180, 205, 220], intensity: 0.75, direction: [2, 2, -0.8]
+  pointLight2: new PointLight({
+    color: [255, 255, 255], intensity: 0.8, position: [21.6, 45.6, 8000]
   })
 });
 
-/* Поглед држимо сами: initialViewState се чита само при покретању,
-   па дугме „погледај одозго“ мора да мења контролисано стање. */
+/* ---------- deck ---------- */
+
+/* Нагиб и заокрет исти као у примеру; средиште и зум подешени за Србију.
+   Поглед држимо сами јер се initialViewState чита само при покретању. */
 let pogled = {
-  longitude: 20.85, latitude: 43.5, zoom: 6.55,
-  pitch: 52, bearing: -14
+  longitude: 20.85, latitude: 43.55, zoom: 6.6,
+  minZoom: 5, maxZoom: 15, pitch: 40.5, bearing: -27
 };
 
 const dek = new DeckGL({
@@ -151,19 +148,24 @@ const dek = new DeckGL({
     pogled = viewState;
     dek.setProps({ viewState: pogled });
   },
-  controller: { dragRotate: true, touchRotate: true },
+  controller: true,
   effects: [svetlo],
   layers: [],
   getTooltip: ({ object }) => {
     if (!object) return null;
+    const [lon, lat] = object.position;
     const cena = Math.round(object.colorValue);
     const ind = object.elevationValue;
     return {
       html:
-        '<div class="opis"><b>' + cena + " €/m²</b>" +
-        "<span>индекс " + ind.toFixed(3).replace(".", ",") +
-        "  ·  +" + Math.round((ind - 1) * 100) + " %</span>" +
-        "<span>" + object.points.length + " тачака мреже</span></div>",
+        '<div class="opis">' +
+        '<span class="k">ширина</span> ' + lat.toFixed(6) + '<br>' +
+        '<span class="k">дужина</span> ' + lon.toFixed(6) + '<br>' +
+        '<b>' + cena + ' €/m²</b> · индекс ' +
+        ind.toFixed(3).replace(".", ",") +
+        ' (+' + Math.round((ind - 1) * 100) + ' %)<br>' +
+        '<span class="k">' + object.points.length + ' тачака мреже</span>' +
+        '</div>',
       style: { background: "none", padding: "0", margin: "0" }
     };
   }
@@ -185,6 +187,22 @@ function osvezi() {
     "+" + Math.round((imax - 1) * 100) + " %";
 }
 
+function veziKlizac(id, naStanje, prikaz) {
+  const el = document.getElementById(id);
+  const izlaz = document.getElementById(id + "-v");
+  el.addEventListener("input", e => {
+    naStanje(+e.target.value);
+    izlaz.textContent = prikaz(+e.target.value);
+    osvezi();
+  });
+  izlaz.textContent = prikaz(+el.value);
+}
+
+veziKlizac("radijus",     v => poluprecnik = v,  v => v);
+veziKlizac("pokrivenost", v => pokrivenost = v,  v => v.toFixed(2).replace(".", ","));
+veziKlizac("percentil",   v => percentil = v,    v => v);
+veziKlizac("visina",      v => visinaSkala = v,  v => v);
+
 document.getElementById("klizac").addEventListener("input", e => {
   t = +e.target.value; primeniMesec(t); osvezi();
 });
@@ -193,9 +211,9 @@ const dugme = document.getElementById("pusti");
 dugme.addEventListener("click", () => {
   if (animacija) {
     clearInterval(animacija); animacija = null;
-    dugme.textContent = "▶  Пусти"; dugme.classList.remove("radi");
+    dugme.textContent = "▶ Пусти"; dugme.classList.remove("radi");
   } else {
-    dugme.textContent = "⏸  Стани"; dugme.classList.add("radi");
+    dugme.textContent = "⏸ Стани"; dugme.classList.add("radi");
     animacija = setInterval(() => {
       t = (t + 1) % M;
       document.getElementById("klizac").value = t;
@@ -204,41 +222,14 @@ dugme.addEventListener("click", () => {
   }
 });
 
-document.getElementById("visina").addEventListener("input", e => {
-  visinaSkala = +e.target.value;
-  document.getElementById("visina-v").textContent = visinaSkala;
-  osvezi();
-});
-document.getElementById("radijus").addEventListener("input", e => {
-  poluprecnik = +e.target.value;
-  document.getElementById("radijus-v").textContent = (poluprecnik / 1000) + " km";
-  osvezi();
-});
-document.getElementById("ravno").addEventListener("click", e => {
-  const spljosteno = e.target.classList.toggle("radi");
-  pogled = Object.assign({}, pogled, {
-    latitude: spljosteno ? 44.05 : 43.5,
-    pitch: spljosteno ? 0 : 52,
-    bearing: spljosteno ? 0 : -14
-  });
-  dek.setProps({ viewState: pogled });
-  e.target.textContent = spljosteno ? "Врати 3Д" : "Погледај одозго";
-});
-
 /* ---------- покретање ---------- */
 
-/* Не користити requestAnimationFrame за покретање: у картици која није
-   видљива он се не извршава, па се страница никад не иницијализује.
-   setTimeout ради и у позадини, а нула довољна да се натпис исцрта. */
+/* Не користити requestAnimationFrame: у картици која није видљива он се
+   не извршава, па се страница никад не иницијализује. */
 setTimeout(() => {
-  const t0 = performance.now();
   pripremi();
   document.getElementById("klizac").value = t;
-  document.getElementById("visina-v").textContent = visinaSkala;
-  document.getElementById("radijus-v").textContent = (poluprecnik / 1000) + " km";
   osvezi();
   document.getElementById("ucitavanje").remove();
   document.getElementById("tacaka").textContent = D.n.toLocaleString("sr-RS");
-  document.getElementById("racun").textContent =
-    Math.round(performance.now() - t0) + " ms";
 }, 0);
