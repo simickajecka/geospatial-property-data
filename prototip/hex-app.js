@@ -91,8 +91,44 @@ let poluprecnik = 2000, pokrivenost = 0.7, percentil = 100;
    transitions.elevationScale анимира само промену вредности, па ако одмах
    цртамо са коначном висином ефекта нема. Исто ради и deck.gl пример:
    elevationScale: data && data.length ? 50 : 0 */
-const VISINA_CILJ = 50;
+let VISINA_ZADATA = 50;
 let visinaSkala = 0;
+
+/* ---------- подешавања из адресе ----------
+   Адреса може да носи подешавања, па се дели готов поглед:
+     hexagon-layer.html?naseljeno=10&mesec=2024-06&precnik=4000
+   Ради и кад се фајл отвори двокликом, преко file:// адресе. */
+
+function procitajParametre() {
+  let p;
+  try { p = new URLSearchParams(location.search); } catch (e) { return; }
+  if (![...p.keys()].length) return;
+
+  const broj = (ime, najmanje, najvise) => {
+    if (!p.has(ime)) return null;
+    const v = parseFloat(p.get(ime).replace(",", "."));
+    return Number.isFinite(v) ? Math.min(najvise, Math.max(najmanje, v)) : null;
+  };
+  const postavi = (id, v, ispis) => {
+    const el = document.getElementById(id);
+    if (el) el.value = v;
+    const iz = document.getElementById(id + "-v");
+    if (iz) iz.textContent = ispis;
+  };
+
+  let v;
+  if ((v = broj("naseljeno", 3, 100)) !== null) { naseljenoUdeo = v; postavi("naseljeno", v, v + " %"); }
+  if ((v = broj("precnik", 500, 20000)) !== null) { poluprecnik = v; postavi("radijus", v, v); }
+  if ((v = broj("pokrivenost", 0, 1)) !== null) { pokrivenost = v; postavi("pokrivenost", v, v.toFixed(2).replace(".", ",")); }
+  if ((v = broj("percentil", 80, 100)) !== null) { percentil = v; postavi("percentil", v, v); }
+  if ((v = broj("visina", 5, 220)) !== null) { VISINA_ZADATA = v; }
+
+  if (p.has("mesec")) {
+    const m = p.get("mesec");
+    const i = MESECI.indexOf(m);
+    t = i > -1 ? i : Math.min(M - 1, Math.max(0, parseInt(m, 10) || M - 1));
+  }
+}
 
 /* ---------- подаци ---------- */
 
@@ -337,6 +373,7 @@ dugme.addEventListener("click", () => {
    не извршава, па се страница никад не иницијализује. */
 setTimeout(() => {
   try {
+    procitajParametre();
     pripremi();
     document.getElementById("klizac").value = t;
     osvezi();
@@ -346,9 +383,9 @@ setTimeout(() => {
 
     /* Тек кад је прво спљоштено цртање отишло, дижемо на пуну висину. */
     setTimeout(() => {
-      visinaSkala = VISINA_CILJ;
+      visinaSkala = VISINA_ZADATA;
       const kl = document.getElementById("visina");
-      if (kl) { kl.value = VISINA_CILJ; document.getElementById("visina-v").textContent = VISINA_CILJ; }
+      if (kl) { kl.value = VISINA_ZADATA; document.getElementById("visina-v").textContent = VISINA_ZADATA; }
       osvezi();
     }, 80);
   } catch (e) {
