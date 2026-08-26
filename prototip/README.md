@@ -89,6 +89,12 @@ python -m http.server 8777 --directory prototip
 омане, ротација и зум престају да раде. Користити `initialViewState` уз
 `controller: true`, као у deck.gl примеру.
 
+**Изабрани шестоугао у deck.gl 9 нема `points` ни `position`.** Има `col`,
+`row`, `colorValue`, `elevationValue` и `count`; `points` постоји само уз
+агрегацију на процесору, а подразумевана је на графичкој. Координата се узима
+из `info.coordinate`. Читање `object.points.length` руши облачић поруком
+„Cannot read properties of undefined (reading 'length')“.
+
 **Не постављати величину canvas-а из CSS-а.** deck.gl сам рачуна и величину
 елемента и позадинску меморију платна. Правило типа `canvas { inset: 0 }`
 му то поквари.

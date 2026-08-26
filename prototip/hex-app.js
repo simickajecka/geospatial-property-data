@@ -10,18 +10,34 @@
    Без овога свака грешка нестане у конзоли и страница само „не ради“.
    Сваки квар се исписује преко екрана, да се одмах види шта је. */
 
-function prijavi(sta, greska) {
+let brojGresaka = 0;
+
+function prijavi(sta, greska, mesto) {
   const p = document.getElementById("greska");
   if (!p) return;
+  if (++brojGresaka > 8) return;          // не затрпавај екран истом грешком
+
+  const poruka = greska && greska.message ? greska.message : String(greska);
+  const stek = greska && greska.stack
+    ? String(greska.stack).split("\n").slice(1, 3).join("\n")
+    : (mesto || "");
+
+  const bezbedno = (s) => String(s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
   p.style.display = "block";
   p.innerHTML +=
-    "<b>" + sta + "</b><br>" +
-    String(greska && greska.message ? greska.message : greska) + "<br><br>";
+    "<b>" + bezbedno(sta) + "</b><br>" + bezbedno(poruka) +
+    (stek ? '<br><span style="opacity:.7;font-size:11px">' +
+            bezbedno(stek) + "</span>" : "") + "<br><br>";
+
   const u = document.getElementById("ucitavanje");
   if (u) u.remove();
 }
 
-window.addEventListener("error", e => prijavi("Грешка у скрипти", e.error || e.message));
+window.addEventListener("error", e =>
+  prijavi("Грешка у скрипти", e.error || e.message,
+          e.filename ? e.filename + ":" + e.lineno + ":" + e.colno : ""));
 window.addEventListener("unhandledrejection", e => prijavi("Неухваћена грешка", e.reason));
 
 if (typeof deck === "undefined") {
@@ -187,23 +203,44 @@ const dek = new DeckGL(Object.assign({
   effects: [svetlo],
   layers: [],
 }, imaPodlogu ? { map: maplibregl, mapStyle: PODLOGA } : {}, {
-  getTooltip: ({ object }) => {
-    if (!object) return null;
-    const [lon, lat] = object.position;
-    const cena = Math.round(object.colorValue);
-    const ind = object.elevationValue;
-    return {
-      html:
-        '<div class="opis">' +
-        '<span class="k">ширина</span> ' + lat.toFixed(6) + '<br>' +
-        '<span class="k">дужина</span> ' + lon.toFixed(6) + '<br>' +
-        '<b>' + cena + ' €/m²</b> · индекс ' +
-        ind.toFixed(3).replace(".", ",") +
-        ' (+' + Math.round((ind - 1) * 100) + ' %)<br>' +
-        '<span class="k">' + object.points.length + ' тачака мреже</span>' +
-        '</div>',
-      style: { background: "none", padding: "0", margin: "0" }
-    };
+  /* Пажња на облик изабраног објекта у deck.gl 9: он има col, row,
+     colorValue, elevationValue и count. Нема `points` — то постоји само
+     уз агрегацију на процесору — ни `position`. Координата се узима из
+     info.coordinate. Читање object.points.length овде руши облачић. */
+  getTooltip: (info) => {
+    try {
+      const o = info && info.object;
+      if (!o) return null;
+
+      const cena = Number.isFinite(o.colorValue) ? Math.round(o.colorValue) : null;
+      const ind = Number.isFinite(o.elevationValue) ? o.elevationValue : null;
+      const koord = info.coordinate;
+
+      const redovi = [];
+      if (koord && koord.length === 2) {
+        redovi.push('<span class="k">ширина</span> ' + koord[1].toFixed(6));
+        redovi.push('<span class="k">дужина</span> ' + koord[0].toFixed(6));
+      }
+      if (cena !== null) {
+        redovi.push('<b>' + cena + ' €/m²</b>' +
+          (ind !== null
+            ? ' · индекс ' + ind.toFixed(3).replace(".", ",") +
+              ' (+' + Math.round((ind - 1) * 100) + ' %)'
+            : ''));
+      }
+      if (Number.isFinite(o.count)) {
+        redovi.push('<span class="k">' + o.count + ' тачака мреже</span>');
+      }
+      if (!redovi.length) return null;
+
+      return {
+        html: '<div class="opis">' + redovi.join("<br>") + '</div>',
+        style: { background: "none", padding: "0", margin: "0" }
+      };
+    } catch (e) {
+      prijavi("Облачић", e);
+      return null;
+    }
   }
 }));
 
