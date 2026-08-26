@@ -88,7 +88,16 @@ const generatorZaWeb =
   'window.G = module.exports;\n' +
   '})();';
 
+/* Подлога: maplibre-gl + CARTO dark-matter, исто што користи deck.gl пример.
+   Тражи мрежу, па иде само у CDN варијанту. */
+const MAPLIBRE_TAGOVI = [
+  '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">',
+  '<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"><\/script>'
+].join('\n');
+
 const telo = sablon
+  .replace('<!--__MAPLIBRE__-->',
+    '<!-- Подлога тражи мрежу, па је у уграђеној варијанти нема. -->')
   .replace('/*__GENERATOR__*/', () => generatorZaWeb)
   .replace('/*__DECKGL__*/', () => deckKod)
   .replace('/*__APP__*/', () => app);
@@ -114,6 +123,7 @@ const verzija = JSON.parse(
   fs.readFileSync(path.join(path.dirname(deckPut), 'package.json'), 'utf8')).version;
 
 const teloCdn = sablon
+  .replace('<!--__MAPLIBRE__-->', () => MAPLIBRE_TAGOVI)
   .replace('<script>/*__GENERATOR__*/</script>', () => '<script>' + generatorZaWeb + '</script>')
   .replace('<script>/*__DECKGL__*/</script>',
     () => '<script src="https://unpkg.com/deck.gl@' + verzija + '/dist.min.js"></script>')

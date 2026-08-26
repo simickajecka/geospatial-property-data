@@ -9,7 +9,7 @@
 const { DeckGL, HexagonLayer, PathLayer,
         LightingEffect, AmbientLight, PointLight } = deck;
 
-const KORAK_KM = 2.5;
+const KORAK_KM = 1.5;
 const MESECI = G.oznakeMeseci();
 const M = MESECI.length;
 
@@ -35,7 +35,7 @@ const MATERIJAL = {
 };
 
 let D = null, tacke = null, t = M - 1, animacija = null;
-let poluprecnik = 6000, pokrivenost = 0.85, percentil = 100, visinaSkala = 50;
+let poluprecnik = 3000, pokrivenost = 1, percentil = 100, visinaSkala = 50;
 
 /* ---------- подаци ---------- */
 
@@ -134,23 +134,29 @@ const svetlo = new LightingEffect({
 
 /* ---------- deck ---------- */
 
-/* Нагиб и заокрет исти као у примеру; средиште и зум подешени за Србију.
-   Поглед држимо сами јер се initialViewState чита само при покретању. */
-let pogled = {
+/* Нагиб и заокрет исти као у примеру; средиште и зум подешени за Србију. */
+const POCETNI_POGLED = {
   longitude: 20.85, latitude: 43.55, zoom: 6.6,
   minZoom: 5, maxZoom: 15, pitch: 40.5, bearing: -27
 };
 
-const dek = new DeckGL({
+/* Подлога постоји само у CDN варијанти, где је maplibre-gl учитан.
+   Иста подлога коју користи и deck.gl пример. */
+const PODLOGA = "https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json";
+const imaPodlogu = typeof maplibregl !== "undefined";
+
+const dek = new DeckGL(Object.assign({
   container: "platno",
-  viewState: pogled,
-  onViewStateChange: ({ viewState }) => {
-    pogled = viewState;
-    dek.setProps({ viewState: pogled });
-  },
+
+  /* Не држати поглед као контролисано стање: тада свако померање мора
+     ручно да се врати кроз setProps, а ако то омане, ротација и зум
+     престају да раде. Пример користи initialViewState — и ми тако. */
+  initialViewState: POCETNI_POGLED,
   controller: true,
+
   effects: [svetlo],
   layers: [],
+}, imaPodlogu ? { map: maplibregl, mapStyle: PODLOGA } : {}, {
   getTooltip: ({ object }) => {
     if (!object) return null;
     const [lon, lat] = object.position;
@@ -169,7 +175,7 @@ const dek = new DeckGL({
       style: { background: "none", padding: "0", margin: "0" }
     };
   }
-});
+}));
 
 /* ---------- управљање ---------- */
 
