@@ -105,6 +105,30 @@ const izlaz =
 const putIzlaza = path.join(koren, 'hexagon-layer.html');
 fs.writeFileSync(putIzlaza, izlaz);
 
+/*
+ * Druga varijanta: deck.gl se povlaci sa unpkg-a umesto da se ugradjuje,
+ * isto kako to rade zvanicni deck.gl "scripting" primeri. Fajl je oko 30 KB
+ * i lakse se poredi sa primerom na deck.gl sajtu, ali trazi internet.
+ */
+const verzija = JSON.parse(
+  fs.readFileSync(path.join(path.dirname(deckPut), 'package.json'), 'utf8')).version;
+
+const teloCdn = sablon
+  .replace('<script>/*__GENERATOR__*/</script>', () => '<script>' + generatorZaWeb + '</script>')
+  .replace('<script>/*__DECKGL__*/</script>',
+    () => '<script src="https://unpkg.com/deck.gl@' + verzija + '/dist.min.js"></script>')
+  .replace('<script>/*__APP__*/</script>', () => '<script>' + app + '</script>');
+
+const izlazCdn =
+  '<!DOCTYPE html>\n<html lang="sr">\n<head>\n' +
+  '<meta charset="utf-8">\n' +
+  '<meta name="viewport" content="width=device-width, initial-scale=1">\n' +
+  teloCdn +
+  '\n</html>\n';
+
+const putCdn = path.join(koren, 'hexagon-layer-cdn.html');
+fs.writeFileSync(putCdn, izlazCdn);
+
 const mb = (s) => (Buffer.byteLength(s) / 1048576).toFixed(2) + ' MB';
 console.log('deck.gl bandl : ' + deckPut);
 console.log('  deck.gl     ' + mb(deckKod));
@@ -112,6 +136,7 @@ console.log('  generator   ' + mb(generatorZaWeb));
 console.log('  aplikacija  ' + mb(app));
 console.log('  ------------------------');
 console.log('  ukupno      ' + mb(izlaz) + '   -> ' + putIzlaza);
+console.log('  CDN verzija ' + mb(izlazCdn) + '   -> ' + putCdn);
 if (Buffer.byteLength(izlaz) > 16 * 1048576) {
   console.log('\n  UPOZORENJE: preko 16 MB, Artifact to nece primiti.');
 }
