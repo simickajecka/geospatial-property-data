@@ -76,7 +76,15 @@ const MATERIJAL = {
   specularColor: [51, 51, 51]
 };
 
-let D = null, tacke = null, t = M - 1, animacija = null;
+let D = null, tacke = null, vidljive = null, t = M - 1, animacija = null;
+
+/* Удео мреже који се приказује, по мери насељености.
+   На 100% приказ је потпуно попуњен — јер је мрежа правилна и свака
+   ћелија унутар границе има вредност. Стварни подаци о становима
+   постоје само тамо где има зграда, па имају празнине. Овај клизач
+   служи да се види како ће приказ изгледати кад дође прави податак. */
+let naseljenoUdeo = 100;
+let poredak = null;
 let poluprecnik = 2000, pokrivenost = 0.7, percentil = 100;
 
 /* Почињемо спљоштено па подижемо — тако се шестоуглови сваки пут „израсту“.
@@ -107,7 +115,36 @@ function pripremi() {
   for (let k = 0; k < n; k++) {
     tacke[k] = { position: [mreza.lon[k], mreza.lat[k]], cena: 0, indeks: 1 };
   }
+
+  /* Груба мера насељености: близина градова плус ретка расута села.
+     У стварном послу ово замењује слој зграда или грађевинско подручје. */
+  const sumSela = G.napraviSum(4242, 3, 40);
+  const skor = new Float32Array(n);
+  for (let k = 0; k < n; k++) {
+    const [x, y] = G.lonLatUKm(mreza.lon[k], mreza.lat[k]);
+    let grad = 0;
+    for (const red of G.GRADOVI) {
+      const [cx, cy] = G.lonLatUKm(red[1], red[2]);
+      grad = Math.max(grad, red[3] * Math.exp(-Math.hypot(x - cx, y - cy) / (red[4] * 0.5)));
+    }
+    skor[k] = grad + 0.6 * Math.pow(sumSela(x, y), 3);
+  }
+  poredak = Array.from({ length: n }, (_, k) => k).sort((a, b) => skor[b] - skor[a]);
+
   primeniMesec(t);
+  primeniNaseljenost();
+}
+
+/* Задржава само најнасељенији део мреже. */
+function primeniNaseljenost() {
+  if (naseljenoUdeo >= 100) { vidljive = tacke; }
+  else {
+    const koliko = Math.max(1, Math.round(D.n * naseljenoUdeo / 100));
+    vidljive = new Array(koliko);
+    for (let i = 0; i < koliko; i++) vidljive[i] = tacke[poredak[i]];
+  }
+  const n = document.getElementById("prikazano");
+  if (n) n.textContent = vidljive.length.toLocaleString("sr-RS");
 }
 
 function primeniMesec(i) {
@@ -135,7 +172,7 @@ function slojevi() {
     }),
     new HexagonLayer({
       id: "hex",
-      data: tacke,
+      data: vidljive,
       getPosition: d => d.position,
 
       gpuAggregation: true,
@@ -163,6 +200,7 @@ function slojevi() {
         getColorWeight: t,
         getElevationWeight: t
       },
+      dataComparator: (a, b) => a === b,
       transitions: { elevationScale: 3000 }
     })
   ];
@@ -272,6 +310,7 @@ veziKlizac("radijus",     v => poluprecnik = v,  v => v);
 veziKlizac("pokrivenost", v => pokrivenost = v,  v => v.toFixed(2).replace(".", ","));
 veziKlizac("percentil",   v => percentil = v,    v => v);
 veziKlizac("visina",      v => visinaSkala = v,  v => v);
+veziKlizac("naseljeno",   v => { naseljenoUdeo = v; primeniNaseljenost(); }, v => v + " %");
 
 document.getElementById("klizac").addEventListener("input", e => {
   t = +e.target.value; primeniMesec(t); osvezi();
