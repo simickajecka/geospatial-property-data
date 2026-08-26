@@ -2,6 +2,7 @@
 # Fiksno seme daje identican rezultat, pa nema razloga drzati ih u istoriji.
 #   node generisi.js --korak 0.5 --izlaz ./podaci_05km
 generator/podaci_*/*
+generator/kepler_*.csv
 !generator/podaci_*/meta.json
 !generator/podaci_*/uzorak_long.csv
 
