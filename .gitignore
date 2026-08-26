@@ -1,0 +1,12 @@
+# Generisani podaci — reprodukuju se iz generator/generisi.js za ~16 s.
+# Fiksno seme daje identican rezultat, pa nema razloga drzati ih u istoriji.
+#   node generisi.js --korak 0.5 --izlaz ./podaci_05km
+generator/podaci_*/*
+!generator/podaci_*/meta.json
+!generator/podaci_*/uzorak_long.csv
+
+# Node
+node_modules/
+
+# Word privremeni fajlovi
+~$*
