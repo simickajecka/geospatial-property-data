@@ -15,8 +15,17 @@ node_modules/
 # Sklopljeni prikazi — prave se iz sablona, aplikacije i bandla
 prototip/hexagon-layer.html
 prototip/hexagon-layer-cdn.html
-prototip/deck.gl-LICENSES.txt
+prototip/LICENSES.txt
 
 # Bandl preuzet za ugradnju
 prototip/maplibre-gl.js
 prototip/maplibre-gl.css
+
+# Folder za predaju — ceo ga pravi napravi-hex.js iz pracenih izvora.
+# Nista se odavde ne cuva u istoriji: slobodno se brise i pravi ponovo.
+# Izvor pisanog teksta je prototip/procitaj-isporuka.md.
+isporuka/
+
+# deck.gl tarbol i raspakovan paket, preuzimaju se sa npm-a
+prototip/deck.gl-*.tgz
+prototip/package/
