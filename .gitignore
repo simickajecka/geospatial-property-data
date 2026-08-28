@@ -26,6 +26,10 @@ prototip/maplibre-gl.css
 # Izvor pisanog teksta je prototip/procitaj-isporuka.md.
 isporuka/
 
+# Drzi se samo lokalno, van repozitorijuma.
+prototip/UPUTSTVO.md
+prototip/cenovna-povrsina.html
+
 # deck.gl tarbol i raspakovan paket, preuzimaju se sa npm-a
 prototip/deck.gl-*.tgz
 prototip/package/

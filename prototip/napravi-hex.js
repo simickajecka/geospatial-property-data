@@ -376,6 +376,8 @@ fs.mkdirSync(isporuka, { recursive: true });
 
 const uIsporuku = [
   ['hexagon-layer.html', 'cenovna-povrsina-3d.html'],
+  /* Ova strana se drzi samo lokalno i nije u repozitorijumu; ako je nema,
+     petlja je preskace i isporuka se napuni bez nje. */
   ['cenovna-povrsina.html', 'poredjenje-prikaza.html'],
   ['LICENSES.txt', 'LICENSES.txt'],
   ['procitaj-isporuka.md', 'PROCITAJ.md']

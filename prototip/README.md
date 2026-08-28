@@ -80,7 +80,7 @@ node napravi-hex.js --deck ./package/dist.min.js --maplibre ./maplibre-gl.js --m
 | фајл | одакле |
 |---|---|
 | `cenovna-povrsina-3d.html` | `hexagon-layer.html`, уграђена варијанта |
-| `poredjenje-prikaza.html` | `cenovna-povrsina.html` |
+| `poredjenje-prikaza.html` | `cenovna-povrsina.html` (само локално) |
 | `LICENSES.txt` | издвојено из бандла |
 | `PROCITAJ.md` | `procitaj-isporuka.md` |
 
@@ -155,18 +155,14 @@ node napravi-hex.js --deck ./package/dist.min.js --maplibre ./maplibre-gl.js --m
 и `LightingEffect`, а `pripremi()` се замени учитавањем стварних података.
 Остало је исто као у њиховом примеру.
 
-## `cenovna-povrsina.html`
+## Фајлови који се држе само локално
 
-Поређење шест начина приказа исте просторно-временске појаве: ниво цена,
-индекс, мапа промене, мале карте по годинама, бивариантни ниво × раст и 3Д.
-Црта се на canvas-у, без иједне спољне библиотеке — фајл се отвара директно
-двокликом. Једино што тражи са мреже јесте словни лик са Google Fonts-а; без
-мреже се узме системски фонт и све ради исто.
+`prototip/cenovna-povrsina.html` и `prototip/UPUTSTVO.md` нису у
+репозиторијуму — стоје у `.gitignore` и постоје само на радној машини.
 
-Фајл је писан руком и не пролази кроз `napravi-hex.js`, па сам носи
-`<!DOCTYPE html>` и `<meta charset="utf-8">`. Без њих прегледач погоди
-windows-1252 и ћирилица се распадне — и при дуплом клику и са сервера који
-не шаље `charset`.
+`napravi-hex.js` то узима у обзир: ако страна са поређењем није ту, само је
+прескочи и напуни `isporuka/` осталим фајловима. Клон репозиторијума се
+склапа без грешке, само без те стране.
 
 ## Отварање преко локалног сервера
 
