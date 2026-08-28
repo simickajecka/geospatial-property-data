@@ -52,7 +52,13 @@ const { DeckGL, HexagonLayer, PathLayer,
         LightingEffect, AmbientLight, PointLight } = deck;
 
 const KORAK_KM = 1.5;
-const MESECI = G.oznakeMeseci();
+
+/* Стварни подаци, ако су уграђени у фајл (napravi-hex.js --podaci).
+   Кад их нема — а подразумевано их нема — мрежа и серија се рачунају
+   генератором, тачно као досад. */
+const PODACI = (typeof window !== "undefined" && window.PODACI) || null;
+
+const MESECI = PODACI ? PODACI.meseci : G.oznakeMeseci();
 const M = MESECI.length;
 
 const CENA_MIN = 1000, CENA_MAX = 2700;
@@ -86,6 +92,13 @@ let D = null, tacke = null, vidljive = null, t = M - 1, animacija = null;
 let naseljenoUdeo = 100;
 let poredak = null;
 let poluprecnik = 2000, pokrivenost = 0.7, percentil = 100;
+
+/* Дијагностика (?dijagnostika=1). Подразумевано искључена и тада не мења
+   ниједну вредност — приказ ради тачно као да је нема. */
+let dijagnostika = false;
+let pikovanje = true;          // pickable на слоју шестоуглова
+let visinaOpseg = 3000;        // горња граница elevationRange
+let prelazi = true;            // transitions.elevationScale
 
 /* Почињемо спљоштено па подижемо — тако се шестоуглови сваки пут „израсту“.
    transitions.elevationScale анимира само промену вредности, па ако одмах
@@ -123,6 +136,8 @@ function procitajParametre() {
   if ((v = broj("percentil", 80, 100)) !== null) { percentil = v; postavi("percentil", v, v); }
   if ((v = broj("visina", 5, 220)) !== null) { VISINA_ZADATA = v; }
 
+  if (p.get("dijagnostika") === "1") dijagnostika = true;
+
   if (p.has("mesec")) {
     const m = p.get("mesec");
     const i = MESECI.indexOf(m);
@@ -132,7 +147,8 @@ function procitajParametre() {
 
 /* ---------- подаци ---------- */
 
-function pripremi() {
+/* Мрежа и серија из генератора — подразумевани пут. Не тражи ниједан улаз. */
+function izGeneratora() {
   const mreza = G.napraviMrezu(KORAK_KM);
   const serija = G.napraviSeriju(mreza);
   const n = mreza.n;
@@ -145,6 +161,28 @@ function pripremi() {
       indeks[i * n + k] = r.indeks[k];
     }
   }
+  return { mreza, cene, indeks };
+}
+
+/* Уграђени стварни подаци. Носе тачке и цене; индекс се рачуна овде, као
+   однос према првом месецу, да се у фајлу не држи двапут иста ствар. */
+function izUgradjenih() {
+  const n = PODACI.n;
+  const mreza = { n, lon: PODACI.lon, lat: PODACI.lat };
+  const cene = PODACI.cene;
+  const indeks = new Float32Array(n * M);
+  for (let k = 0; k < n; k++) {
+    const osnova = cene[k];
+    for (let i = 0; i < M; i++) {
+      indeks[i * n + k] = osnova > 0 ? cene[i * n + k] / osnova : 1;
+    }
+  }
+  return { mreza, cene, indeks };
+}
+
+function pripremi() {
+  const { mreza, cene, indeks } = PODACI ? izUgradjenih() : izGeneratora();
+  const n = mreza.n;
   D = { mreza, n, cene, indeks };
 
   tacke = new Array(n);
@@ -227,17 +265,17 @@ function slojevi() {
       elevationAggregation: "MEAN",
       getElevationWeight: d => d.indeks,
       elevationDomain: [IND_MIN, IND_MAX],
-      elevationRange: [0, 3000],
+      elevationRange: [0, visinaOpseg],
       elevationScale: visinaSkala,
 
       material: MATERIJAL,
-      pickable: true,
+      pickable: pikovanje,
       updateTriggers: {
         getColorWeight: t,
         getElevationWeight: t
       },
       dataComparator: (a, b) => a === b,
-      transitions: { elevationScale: 3000 }
+      transitions: prelazi ? { elevationScale: 3000 } : {}
     })
   ];
 }
@@ -367,6 +405,57 @@ dugme.addEventListener("click", () => {
   }
 });
 
+/* ---------- дијагностика (?dijagnostika=1) ----------
+   Мери зашто приказ штуца. Без параметра се ништа од овога не извршава,
+   па испоручени фајл остаје непромењен.
+
+   fps и времена долазе из deck.gl-овог `metrics`, који их сам скупља.
+   Прекидачи гађају два најскупља осумњичена: пиковање (свако померање
+   миша исцрта сцену још једном у помоћни бафер, па чита назад са графичке)
+   и висину стубова (висок стуб покрива много пиксела, а сваки преклопљени
+   пиксел се сенчи изнова). */
+
+function pokreniDijagnostiku() {
+  const box = document.createElement("div");
+  box.id = "dijagnostika";
+  box.style.cssText =
+    "position:fixed;left:12px;top:12px;z-index:70;background:rgba(0,0,0,.86);" +
+    "color:#8f8;font:11px/1.5 monospace;padding:10px 12px;min-width:210px;" +
+    "border-left:3px solid #6c6";
+  box.innerHTML =
+    '<b style="color:#cfc">МЕРЕЊЕ</b><br><span id="dg-brojke">…</span><hr' +
+    ' style="border:0;border-top:1px solid #363;margin:8px 0">' +
+    '<label><input type="checkbox" id="dg-pik" checked> пиковање</label><br>' +
+    '<label><input type="checkbox" id="dg-prelaz" checked> прелази</label><br>' +
+    '<label>висина стуба <select id="dg-vis">' +
+    '<option value="3000">3000 (сада)</option>' +
+    '<option value="1000">1000 (као пример)</option>' +
+    '<option value="300">300 (ниско)</option></select></label>';
+  document.body.appendChild(box);
+
+  const brojke = box.querySelector("#dg-brojke");
+  setInterval(() => {
+    const m = dek.metrics || {};
+    const r = (v) => Number.isFinite(v) ? v.toFixed(1) : "—";
+    brojke.innerHTML =
+      "fps        <b>" + r(m.fps) + "</b><br>" +
+      "gpu/frame  " + r(m.gpuTimePerFrame) + " ms<br>" +
+      "cpu/frame  " + r(m.cpuTimePerFrame) + " ms<br>" +
+      "pick       " + r(m.pickTime) + " ms / " + (m.pickCount || 0) + "×<br>" +
+      "шестоуглова " + (m.drawLayersCount || 0) + " слоја";
+  }, 500);
+
+  box.querySelector("#dg-pik").addEventListener("change", (e) => {
+    pikovanje = e.target.checked; osvezi();
+  });
+  box.querySelector("#dg-prelaz").addEventListener("change", (e) => {
+    prelazi = e.target.checked; osvezi();
+  });
+  box.querySelector("#dg-vis").addEventListener("change", (e) => {
+    visinaOpseg = +e.target.value; osvezi();
+  });
+}
+
 /* ---------- покретање ---------- */
 
 /* Не користити requestAnimationFrame: у картици која није видљива он се
@@ -375,10 +464,23 @@ setTimeout(() => {
   try {
     procitajParametre();
     pripremi();
-    document.getElementById("klizac").value = t;
+
+    /* Број месеци долази из података, не из шаблона — уграђени извод не
+       мора да има баш 96 месеци колико их има генератор. */
+    const klizacVreme = document.getElementById("klizac");
+    klizacVreme.max = M - 1;
+    klizacVreme.value = t;
+
+    /* Ознака извора прати податке. Кад су уграђени, пише оно што о себи
+       каже meta.json — да фајл никад не тврди нешто друго него што носи. */
+    if (PODACI && PODACI.napomena) {
+      const o = document.getElementById("oznaka-podataka");
+      if (o) o.textContent = PODACI.napomena;
+    }
     osvezi();
     const u = document.getElementById("ucitavanje");
     if (u) u.remove();
+    if (dijagnostika) pokreniDijagnostiku();
     document.getElementById("tacaka").textContent = D.n.toLocaleString("sr-RS");
 
     /* Тек кад је прво спљоштено цртање отишло, дижемо на пуну висину. */
