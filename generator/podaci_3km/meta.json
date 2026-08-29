@@ -1,7 +1,14 @@
 {
   "napomena": "SINTETICKI PODACI - ne koristiti za procenu vrednosti.",
   "korak_km": 3,
-  "broj_tacaka": 10150,
+  "celija": {
+    "oblik": "sestougao",
+    "poluprecnik_m": 1861,
+    "razmak_kolona_m": 2792,
+    "razmak_vrsta_m": 3224,
+    "napomena": "temena na istoku i zapadu (deck.gl ColumnLayer, angle 0)"
+  },
+  "broj_tacaka": 10132,
   "broj_meseci": 96,
   "prvi_mesec": "2019-01",
   "poslednji_mesec": "2026-12",
@@ -112,17 +119,17 @@
   "cene_bin": {
     "tip": "uint16 little-endian",
     "raspored": "mesec-major: [mesec0: sve tacke][mesec1: sve tacke]...",
-    "duzina_bajtova": 1948800,
+    "duzina_bajtova": 1945344,
     "opseg_vrednosti": [
       1000,
-      2627
+      2664
     ]
   },
   "indeks": {
     "objasnjenje": "indeks = 1.0 u 2019-01",
     "opseg_na_kraju": [
       1.382,
-      2.135
+      2.136
     ]
   },
   "granica": "PRIBLIZNA kontura ugradjena u generator.js - zameniti zvanicnom granicom iz GeoSrbije"

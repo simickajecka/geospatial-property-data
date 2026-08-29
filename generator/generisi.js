@@ -90,6 +90,16 @@ tok.on('close', () => {
   const meta = {
     napomena: 'SINTETICKI PODACI - ne koristiti za procenu vrednosti.',
     korak_km: korak,
+    /* Geometrija celije. Tacke leze na sestougaonoj resetki, pa prikaz crta
+       jednu celiju po tacki i ne mora nista da preracunava. Poluprecnik je
+       rastojanje od sredista do temena; celije se slazu bez rupa. */
+    celija: {
+      oblik: 'sestougao',
+      poluprecnik_m: Math.round(mreza.poluprecnikKm * 1000),
+      razmak_kolona_m: Math.round(1.5 * mreza.poluprecnikKm * 1000),
+      razmak_vrsta_m: Math.round(Math.sqrt(3) * mreza.poluprecnikKm * 1000),
+      napomena: 'temena na istoku i zapadu (deck.gl ColumnLayer, angle 0)'
+    },
     broj_tacaka: mreza.n,
     broj_meseci: M,
     prvi_mesec: serija.meseci[0],

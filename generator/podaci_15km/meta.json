@@ -1,7 +1,14 @@
 {
   "napomena": "SINTETICKI PODACI - ne koristiti za procenu vrednosti.",
   "korak_km": 1.5,
-  "broj_tacaka": 40568,
+  "celija": {
+    "oblik": "sestougao",
+    "poluprecnik_m": 931,
+    "razmak_kolona_m": 1396,
+    "razmak_vrsta_m": 1612,
+    "napomena": "temena na istoku i zapadu (deck.gl ColumnLayer, angle 0)"
+  },
+  "broj_tacaka": 40559,
   "broj_meseci": 96,
   "prvi_mesec": "2019-01",
   "poslednji_mesec": "2026-12",
@@ -112,10 +119,10 @@
   "cene_bin": {
     "tip": "uint16 little-endian",
     "raspored": "mesec-major: [mesec0: sve tacke][mesec1: sve tacke]...",
-    "duzina_bajtova": 7789056,
+    "duzina_bajtova": 7787328,
     "opseg_vrednosti": [
       1000,
-      2670
+      2634
     ]
   },
   "indeks": {

@@ -145,6 +145,40 @@ function napraviSum(seed, oktave, osnovnaCelija) {
 
 // ------------------------------------------------------- mreza
 
+/*
+ * Sestougaona resetka, a ne kvadratna.
+ *
+ * ZASTO. Prikaz crta jednu celiju po tacki, ColumnLayer-om sa sest strana.
+ * Sestouglovi popunjavaju ravan bez preklopa i bez rupa samo ako su centri
+ * na sestougaonoj resetki; na kvadratnoj bi ostajali procepi. Ranije je
+ * mreza bila kvadratna, pa je HexagonLayer u pregledacu ponovo delio vec
+ * podeljene podatke: na koraku od 3 km je svaki sestougao dobijao tacno
+ * jednu tacku, a na 1,5 km su susedni dobijali dve ili tri, pa je prosek
+ * bio racunat nad razlicito velikim uzorcima. Odatle su dolazile pravilne
+ * pruge po povrsini. Geometrija celije se sada odredjuje jednom, ovde.
+ *
+ * MERA. `korakKm` i dalje znaci isto: stranu kvadrata te povrsine. Iz nje
+ * se racuna poluprecnik sestougla, jer je povrsina sestougla (3*sqrt(3)/2)*R^2,
+ * pa je R = korak / sqrt(3*sqrt(3)/2). Broj tacaka time ostaje uporediv sa
+ * ranijim kvadratnim mrezama istog koraka.
+ *
+ * RASPORED. deck.gl-ov ColumnLayer pri `angle: 0` crta sestougao sa temenima
+ * na istoku i zapadu i ravnim ivicama gore i dole. Takav se slaze ovako:
+ *   razmak kolona   1.5 * R
+ *   razmak vrsta    sqrt(3) * R
+ *   svaka druga kolona pomerena za pola vrste
+ * Svih sest suseda je tada na rastojanju sqrt(3)*R.
+ *
+ * IZOBLICENJE. Resetka je pravilna u ovdasnjoj ekvidistantnoj projekciji,
+ * a prikaz crta celije u metrima na tlu. Preko Srbije se to razilazi za oko
+ * 3.5% po duzini (isto izoblicenje koje je vec opisano uz LAT0), pa se pri
+ * punoj popunjenosti celije na severu neznatno preklapaju, a na jugu ostave
+ * tanku fugu. Pravo resenje je zvanicni CRS (UTM 34N), isto kao i za sve
+ * ostalo u ovom fajlu.
+ */
+
+const R_PO_KORAKU = 1 / Math.sqrt(3 * Math.sqrt(3) / 2);   // 0.6204...
+
 function napraviMrezu(korakKm, granica) {
   const poly = granica || GRANICA_PRIBLIZNA;
   let minLon = 180, maxLon = -180, minLat = 90, maxLat = -90;
@@ -156,21 +190,26 @@ function napraviMrezu(korakKm, granica) {
   }
   const [x0, y0] = lonLatUKm(minLon, minLat);
   const [x1, y1] = lonLatUKm(maxLon, maxLat);
-  const nx = Math.ceil((x1 - x0) / korakKm);
-  const ny = Math.ceil((y1 - y0) / korakKm);
+
+  const R = korakKm * R_PO_KORAKU;
+  const dx = 1.5 * R;                 // razmak kolona
+  const dy = Math.sqrt(3) * R;        // razmak vrsta
+  const nx = Math.ceil((x1 - x0) / dx);
+  const ny = Math.ceil((y1 - y0) / dy);
 
   const lon = [], lat = [], gx = [], gy = [];
   for (let j = 0; j < ny; j++) {
     for (let i = 0; i < nx; i++) {
-      const x = x0 + (i + 0.5) * korakKm;
-      const y = y0 + (j + 0.5) * korakKm;
+      const x = x0 + (i + 0.5) * dx;
+      // svaka druga kolona pomerena za pola vrste — bez toga se ne slazu
+      const y = y0 + (j + 0.5) * dy + (i & 1 ? dy / 2 : 0);
       const [lo, la] = kmULonLat(x, y);
       if (!uPoligonu(lo, la, poly)) continue;
       lon.push(lo); lat.push(la); gx.push(i); gy.push(j);
     }
   }
   return {
-    korakKm, nx, ny, x0, y0,
+    korakKm, poluprecnikKm: R, nx, ny, x0, y0,
     minLon, maxLon, minLat, maxLat,
     n: lon.length,
     lon: Float64Array.from(lon),

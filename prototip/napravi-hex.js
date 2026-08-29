@@ -287,17 +287,31 @@ function spakujPodatke(folder) {
      u ploci. Fajl tako nikad ne tvrdi nesto drugo nego sto zaista nosi. */
   const napomena = meta.napomena || '';
 
+  /* Geometrija celije putuje uz podatke: prikaz crta jednu celiju po tacki i
+     mora da zna koliko je velika. Ako je meta.json ne nosi — sto ce biti
+     slucaj kod tudjeg izvoda — racuna se iz koraka, kao u generatoru. */
+  const R_PO_KORAKU = 1 / Math.sqrt(3 * Math.sqrt(3) / 2);
+  let poluprecnikM = meta.celija && meta.celija.poluprecnik_m;
+  if (!poluprecnikM) {
+    if (!meta.korak_km) {
+      throw new Error('--podaci: meta.json nema ni celija.poluprecnik_m ni korak_km, ' +
+        'pa se ne zna kolika je celija');
+    }
+    poluprecnikM = Math.round(meta.korak_km * 1000 * R_PO_KORAKU);
+  }
+
   /* U HTML ide samo podatak. `<` se izlazi jer bi ga napomena iz meta.json
      mogla uneti i prekinuti <script> blok; base64 abeceda ga nema, pa se
      sam niz time ne menja. */
   const kod = 'window.PODACI_PAKET=' + JSON.stringify({
     b64: spakovano.toString('base64'),
     meseci: meta.meseci,
-    napomena: napomena
+    napomena: napomena,
+    poluprecnikM: poluprecnikM
   }).replace(/</g, '\\u003c') + ';';
 
   return {
-    kod, n, M, napomena, kodPakovanja, zasicenja, odstupanje,
+    kod, n, M, napomena, kodPakovanja, zasicenja, odstupanje, poluprecnikM,
     sirovoB: sirove.length,
     spakovanoB: spakovano.length,
     ukupnoB: Buffer.byteLength(kod)
@@ -464,6 +478,7 @@ if (podaciOpis) {
     '  ->  spakovano ' + mbB(podaciOpis.spakovanoB) +
     '  ->  base64 ' + mbB(podaciOpis.ukupnoB) +
     '   (x' + (podaciOpis.sirovoB / podaciOpis.spakovanoB).toFixed(1) + ')');
+  console.log('    celija    sestougao, poluprecnik ' + podaciOpis.poluprecnikM + ' m');
   console.log('    format    kod ' + podaciOpis.kodPakovanja + ' — ' +
     (podaciOpis.kodPakovanja === 1
       ? 'baza uint16 + delta int8, provera prosla'

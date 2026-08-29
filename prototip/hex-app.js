@@ -48,10 +48,14 @@ if (typeof deck === "undefined") {
   throw new Error("deck.gl nije ucitan");
 }
 
-const { DeckGL, HexagonLayer, PathLayer,
-        LightingEffect, AmbientLight, PointLight } = deck;
+const { DeckGL, ColumnLayer, PathLayer,
+        LightingEffect, AmbientLight, PointLight, DataFilterExtension } = deck;
 
 const KORAK_KM = 1.5;
+
+/* Полупречник ћелије у метрима. Долази уз податке; кад се рачуна генератором,
+   изводи се из корака исто као тамо: површина шестоугла је (3√3/2)·R². */
+const R_PO_KORAKU = 1 / Math.sqrt(3 * Math.sqrt(3) / 2);
 
 /* Стварни подаци, ако су уграђени у фајл (napravi-hex.js --podaci).
    Кад их нема — а подразумевано их нема — мрежа и серија се рачунају
@@ -86,7 +90,41 @@ const MATERIJAL = {
   specularColor: [51, 51, 51]
 };
 
-let D = null, tacke = null, vidljive = null, t = M - 1, animacija = null;
+let D = null, t = M - 1, animacija = null;
+
+/* Ћелије се сад цртају једна по тачки, па се и подаци држе као равни низови:
+   положаји једном, цена и индекс текућег месеца. Никаквих ситних објеката. */
+let polozaji = null, zaSloj = null;
+let cenaSad = null, indeksSad = null, rang = null;
+let brojNaseljenih = 0;
+
+/* Колико траје један корак анимације и, заједно с тим, претапање између
+   два месеца. Иста вредност иде и у setInterval и у transitions. */
+const KORAK_ANIMACIJE = 130;
+
+/* Једна инстанца филтера за све слојеве — прављење новог у сваком кадру би
+   значило да deck.gl сваки пут поново саставља шејдер. */
+const filter = new DataFilterExtension({ filterSize: 2 });
+
+/* Боја носи цену, у шест степени — исто како је HexagonLayer делио свој
+   colorRange, да слика остане онаква каква је била. */
+function bojaZaCenu(cena, target) {
+  let u = (cena - CENA_MIN) / (CENA_MAX - CENA_MIN);
+  u = u < 0 ? 0 : (u > 1 ? 1 : u);
+  let i = Math.floor(u * PALETA.length);
+  if (i >= PALETA.length) i = PALETA.length - 1;
+  const b = PALETA[i];
+  target[0] = b[0]; target[1] = b[1]; target[2] = b[2]; target[3] = 255;
+  return target;
+}
+
+/* Висина носи индекс. Раније је ово радио HexagonLayer преко elevationDomain
+   и elevationRange; резултат је исти, само се сад рачуна овде. */
+function visinaZaIndeks(ind) {
+  let u = (ind - IND_MIN) / (IND_MAX - IND_MIN);
+  u = u < 0 ? 0 : (u > 1 ? 1 : u);
+  return u * visinaOpseg;
+}
 
 /* Удео мреже који се приказује, по мери насељености.
    На 100% приказ је потпуно попуњен — јер је мрежа правилна и свака
@@ -95,7 +133,17 @@ let D = null, tacke = null, vidljive = null, t = M - 1, animacija = null;
    служи да се види како ће приказ изгледати кад дође прави податак. */
 let naseljenoUdeo = 100;
 let poredak = null;
-let poluprecnik = 2000, pokrivenost = 0.7, percentil = 100;
+let pokrivenost = 0.7, percentil = 100;
+
+/* Величина ћелије више није ствар погледа него података: одређена је
+   решетком на којој тачке леже и не сме да се мења клизачем — сваки други
+   полупречник би оставио рупе или преклоп. Попуњеност је оно што је од
+   ранијег „пречника“ заиста било корисно, и она остаје. */
+let poluprecnik = Math.round(KORAK_KM * 1000 * R_PO_KORAKU);
+
+/* Горња граница цене за приказ, из клизача перцентила. Ћелије изнад ње се
+   не цртају — филтрира их DataFilterExtension, на графичкој. */
+let pragCene = Infinity;
 
 /* Дијагностика (?dijagnostika=1). Подразумевано искључена и тада не мења
    ниједну вредност — приказ ради тачно као да је нема. */
@@ -135,7 +183,9 @@ function procitajParametre() {
 
   let v;
   if ((v = broj("naseljeno", 3, 100)) !== null) { naseljenoUdeo = v; postavi("naseljeno", v, v + " %"); }
-  if ((v = broj("precnik", 500, 20000)) !== null) { poluprecnik = v; postavi("radijus", v, v); }
+  /* `precnik` је остао из времена кад је величина ћелије била ствар погледа.
+     Више није — ћелија је одређена решетком. Стара адреса се не квари, само
+     тај део нема дејства. */
   if ((v = broj("pokrivenost", 0, 1)) !== null) { pokrivenost = v; postavi("pokrivenost", v, v.toFixed(2).replace(".", ",")); }
   if ((v = broj("percentil", 80, 100)) !== null) { percentil = v; postavi("percentil", v, v); }
   if ((v = broj("visina", 5, 220)) !== null) { VISINA_ZADATA = v; }
@@ -236,7 +286,8 @@ async function raspakuj(paket) {
   }
 
   return { n: n, M: brMeseci, lon: lon, lat: lat, cene: cene,
-           meseci: paket.meseci, napomena: paket.napomena };
+           meseci: paket.meseci, napomena: paket.napomena,
+           poluprecnikM: paket.poluprecnikM || null };
 }
 
 /* Уграђени стварни подаци. Носе тачке и цене; индекс се рачуна овде, као
@@ -260,10 +311,23 @@ function pripremi() {
   const n = mreza.n;
   D = { mreza, n, cene, indeks };
 
-  tacke = new Array(n);
+  /* Величина ћелије долази уз податке; кад их нема, изводи се из корака
+     исто као у генератору, да се цртано и рачунато не разиђу. */
+  poluprecnik = (PODACI && PODACI.poluprecnikM) ||
+                Math.round(KORAK_KM * 1000 * R_PO_KORAKU);
+
+  /* Положаји иду у један низ и више се не мењају. deck.gl их узима као
+     готов бафер, без иједног позива приступника и без 40.000 ситних
+     објеката какве је ранија верзија правила. */
+  polozaji = new Float64Array(n * 2);
   for (let k = 0; k < n; k++) {
-    tacke[k] = { position: [mreza.lon[k], mreza.lat[k]], cena: 0, indeks: 1 };
+    polozaji[k * 2] = mreza.lon[k];
+    polozaji[k * 2 + 1] = mreza.lat[k];
   }
+  zaSloj = { length: n, attributes: { getPosition: { value: polozaji, size: 2 } } };
+
+  cenaSad = new Float32Array(n);
+  indeksSad = new Float32Array(n);
 
   /* Груба мера насељености: близина градова плус ретка расута села.
      У стварном послу ово замењује слој зграда или грађевинско подручје. */
@@ -280,28 +344,61 @@ function pripremi() {
   }
   poredak = Array.from({ length: n }, (_, k) => k).sort((a, b) => skor[b] - skor[a]);
 
+  /* Ранг по насељености, по ћелији. Клизач „насељени део“ више не прави нов
+     низ тачака него само помера горњу границу овог ранга — филтрирање је на
+     графичкој, кроз DataFilterExtension. */
+  rang = new Float32Array(n);
+  for (let i = 0; i < n; i++) rang[poredak[i]] = i;
+
   primeniMesec(t);
   primeniNaseljenost();
 }
 
 /* Задржава само најнасељенији део мреже. */
 function primeniNaseljenost() {
-  if (naseljenoUdeo >= 100) { vidljive = tacke; }
-  else {
-    const koliko = Math.max(1, Math.round(D.n * naseljenoUdeo / 100));
-    vidljive = new Array(koliko);
-    for (let i = 0; i < koliko; i++) vidljive[i] = tacke[poredak[i]];
-  }
-  const n = document.getElementById("prikazano");
-  if (n) n.textContent = vidljive.length.toLocaleString("sr-RS");
+  brojNaseljenih = naseljenoUdeo >= 100
+    ? D.n
+    : Math.max(1, Math.round(D.n * naseljenoUdeo / 100));
 }
 
 function primeniMesec(i) {
   const off = i * D.n;
   for (let k = 0; k < D.n; k++) {
-    tacke[k].cena = D.cene[off + k];
-    tacke[k].indeks = D.indeks[off + k];
+    cenaSad[k] = D.cene[off + k];
+    indeksSad[k] = D.indeks[off + k];
   }
+}
+
+/* ---------- горњи перцентил ----------
+   Ранији HexagonLayer је ово радио сам: ћелије изнад перцентила је сакривао.
+   ColumnLayer нема ту особину, па се праг рачуна овде и предаје филтеру.
+
+   Цене су цели бројеви у уском опсегу, па се перцентил добија пребројавањем
+   уместо сортирањем: један пролаз кроз ћелије и један кроз бројач. Тачно је
+   као сортирање, а не троши ништа приметно ни при пуштеној анимацији. */
+
+const BROJAC = new Uint32Array(65536);
+
+function izracunajPrag() {
+  if (percentil >= 100) { pragCene = Infinity; return; }
+
+  BROJAC.fill(0);
+  let ukupno = 0;
+  for (let k = 0; k < D.n; k++) {
+    if (rang[k] >= brojNaseljenih) continue;   // те се ионако не цртају
+    const c = cenaSad[k] | 0;
+    BROJAC[c < 0 ? 0 : c > 65535 ? 65535 : c]++;
+    ukupno++;
+  }
+  if (!ukupno) { pragCene = Infinity; return; }
+
+  const koliko = Math.floor(ukupno * percentil / 100);
+  let zbir = 0;
+  for (let c = 0; c < 65536; c++) {
+    zbir += BROJAC[c];
+    if (zbir >= koliko) { pragCene = c; return; }
+  }
+  pragCene = Infinity;
 }
 
 /* ---------- слојеви ---------- */
@@ -319,38 +416,49 @@ function slojevi() {
       widthUnits: "pixels",
       parameters: { depthTest: false }
     }),
-    new HexagonLayer({
-      id: "hex",
-      data: vidljive,
-      getPosition: d => d.position,
+    new ColumnLayer({
+      id: "celije",
+      data: zaSloj,
 
-      gpuAggregation: true,
+      /* Шест страна, темена на истоку и западу — исто што HexagonLayer црта
+         испод себе, само без корака агрегације. Полупречник је одређен
+         решетком на којој тачке леже, па се не подешава. */
+      diskResolution: 6,
       radius: poluprecnik,
-      coverage: pokrivenost,
-      upperPercentile: percentil,
+      angle: 0,
       extruded: true,
-
-      /* боја носи цену */
-      colorAggregation: "MEAN",
-      getColorWeight: d => d.cena,
-      colorRange: PALETA,
-      colorDomain: [CENA_MIN, CENA_MAX],
-
-      /* висина носи индекс — исти опсег и размера као у примеру */
-      elevationAggregation: "MEAN",
-      getElevationWeight: d => d.indeks,
-      elevationDomain: [IND_MIN, IND_MAX],
-      elevationRange: [0, visinaOpseg],
+      coverage: pokrivenost,
       elevationScale: visinaSkala,
+
+      getFillColor: (d, { index, target }) => bojaZaCenu(cenaSad[index], target),
+      getElevation: (d, { index }) => visinaZaIndeks(indeksSad[index]),
+
+      /* Оба филтера иду на графичку: цена преко прага перцентила и ранг
+         насељености. Ниједан од њих више не тражи да се низ података
+         прегради — мења се само filterRange. */
+      extensions: [filter],
+      filterSize: 2,
+      getFilterValue: (d, { index, target }) => {
+        target[0] = cenaSad[index];
+        target[1] = rang[index];
+        return target;
+      },
+      filterRange: [[0, pragCene], [0, brojNaseljenih - 1]],
 
       material: MATERIJAL,
       pickable: pikovanje,
       updateTriggers: {
-        getColorWeight: t,
-        getElevationWeight: t
+        getFillColor: t,
+        getElevation: t,
+        getFilterValue: t
       },
-      dataComparator: (a, b) => a === b,
-      transitions: prelazi ? { elevationScale: 3000 } : {}
+
+      /* Сад кад свака ћелија има своју висину и боју, прелаз може да иде по
+         тим вредностима, а не само по укупној размери као раније. Због тога
+         се месеци претапају уместо да прескачу. */
+      transitions: prelazi
+        ? { getElevation: KORAK_ANIMACIJE, getFillColor: KORAK_ANIMACIJE }
+        : {}
     })
   ];
 }
@@ -401,26 +509,25 @@ const dek = new DeckGL(Object.assign({
   /* Враћамо обичан текст, не HTML — тада deck.gl примени свој
      подразумевани изглед облачића, исти као на њиховој страници.
 
-     Пажња на облик објекта у deck.gl 9: има col, row, colorValue,
-     elevationValue и count. Нема `points` (то је само уз агрегацију на
-     процесору), а `position` уме да да бесмислене вредности — и њихов
-     пример га зато штити са Number.isFinite. Поузданија је info.coordinate. */
+     Сад кад се црта једна ћелија по тачки, `info.index` је баш та тачка, па
+     облачић исписује њену цену и њене координате. Ранија верзија је овде
+     морала да чита colorValue и elevationValue — просек шестоугла над
+     непознатим бројем тачака — и да координату вади из info.coordinate,
+     јер је `position` умео да да бесмислену вредност. */
   getTooltip: (info) => {
     try {
-      const o = info && info.object;
-      if (!o) return null;
-      const k = info.coordinate;
-      const cena = Number.isFinite(o.colorValue) ? Math.round(o.colorValue) : null;
-      const ind = Number.isFinite(o.elevationValue) ? o.elevationValue : null;
+      if (!info || !info.layer || info.layer.id !== "celije") return null;
+      const k = info.index;
+      if (!(k >= 0) || !D || k >= D.n) return null;
 
+      const ind = indeksSad[k];
       return [
-        k && k.length === 2 ? "ширина: " + k[1].toFixed(6) : null,
-        k && k.length === 2 ? "дужина: " + k[0].toFixed(6) : null,
-        cena !== null ? cena + " €/m²" : null,
-        ind !== null ? "индекс " + ind.toFixed(3).replace(".", ",") +
-                       "  (+" + Math.round((ind - 1) * 100) + " %)" : null,
-        Number.isFinite(o.count) ? o.count + " тачака мреже" : null
-      ].filter(Boolean).join("\n");
+        "ширина: " + D.mreza.lat[k].toFixed(6),
+        "дужина: " + D.mreza.lon[k].toFixed(6),
+        Math.round(cenaSad[k]) + " €/m²",
+        "индекс " + ind.toFixed(3).replace(".", ",") +
+          "  (+" + Math.round((ind - 1) * 100) + " %)"
+      ].join("\n");
     } catch (e) {
       prijavi("Облачић", e);
       return null;
@@ -431,17 +538,29 @@ const dek = new DeckGL(Object.assign({
 /* ---------- управљање ---------- */
 
 function osvezi() {
+  izracunajPrag();
   dek.setProps({ layers: slojevi() });
   document.getElementById("mesec").textContent = MESECI[t];
-  const off = t * D.n;
-  let zbir = 0, imax = 0;
+
+  /* Бројке прате оно што се види, не целу мрежу. Раније су се рачунале
+     преко свих тачака, па је спуштање „насељеног дела“ на 10% остављало
+     просек целе Србије поред приказаних десет посто — а то су баш најскупље
+     ћелије, тако да је бројка била нижа од свега на екрану. */
+  let zbir = 0, imax = 0, koliko = 0;
   for (let k = 0; k < D.n; k++) {
-    zbir += D.cene[off + k];
-    if (D.indeks[off + k] > imax) imax = D.indeks[off + k];
+    if (rang[k] >= brojNaseljenih) continue;
+    if (cenaSad[k] > pragCene) continue;
+    zbir += cenaSad[k];
+    if (indeksSad[k] > imax) imax = indeksSad[k];
+    koliko++;
   }
-  document.getElementById("prosek").textContent = Math.round(zbir / D.n) + " €";
+
+  document.getElementById("prosek").textContent =
+    koliko ? Math.round(zbir / koliko) + " €" : "—";
   document.getElementById("najveci").textContent =
-    "+" + Math.round((imax - 1) * 100) + " %";
+    koliko ? "+" + Math.round((imax - 1) * 100) + " %" : "—";
+  document.getElementById("prikazano").textContent =
+    koliko.toLocaleString("sr-RS");
 }
 
 function veziKlizac(id, naStanje, prikaz) {
@@ -455,7 +574,9 @@ function veziKlizac(id, naStanje, prikaz) {
   izlaz.textContent = prikaz(+el.value);
 }
 
-veziKlizac("radijus",     v => poluprecnik = v,  v => v);
+/* Клизача за пречник више нема: величина ћелије је особина решетке на којој
+   подаци леже, а не подешавање погледа. Попуњеност ради оно што је од
+   пречника заиста било корисно. */
 veziKlizac("pokrivenost", v => pokrivenost = v,  v => v.toFixed(2).replace(".", ","));
 veziKlizac("percentil",   v => percentil = v,    v => v);
 veziKlizac("visina",      v => visinaSkala = v,  v => v);
@@ -470,13 +591,19 @@ dugme.addEventListener("click", () => {
   if (animacija) {
     clearInterval(animacija); animacija = null;
     dugme.textContent = "▶ Пусти"; dugme.classList.remove("radi");
+    pikovanje = true;
+    osvezi();
   } else {
     dugme.textContent = "⏸ Стани"; dugme.classList.add("radi");
+    /* Док анимација иде, пиковање се гаси: свако померање миша иначе исцрта
+       сцену још једном у помоћни бафер и прочита је назад са графичке, а то
+       се при пуштеној анимацији дешава у сваком кадру. Враћа се на стоп. */
+    pikovanje = false;
     animacija = setInterval(() => {
       t = (t + 1) % M;
       document.getElementById("klizac").value = t;
       primeniMesec(t); osvezi();
-    }, 130);
+    }, KORAK_ANIMACIJE);
   }
 });
 
@@ -488,7 +615,15 @@ dugme.addEventListener("click", () => {
    Прекидачи гађају два најскупља осумњичена: пиковање (свако померање
    миша исцрта сцену још једном у помоћни бафер, па чита назад са графичке)
    и висину стубова (висок стуб покрива много пиксела, а сваки преклопљени
-   пиксел се сенчи изнова). */
+   пиксел се сенчи изнова).
+
+   ВАЖНО о читању бројки. `dek.metrics` се не освежава непрекидно: deck.gl га
+   пуни на сваких 60 исцртаних кадрова и одмах затим нулира бројаче
+   (`_metricsCounter++ % 60 === 0`). А исцртава само кад има шта да се промени.
+   Ранија верзија је анкетно читала `dek.metrics` на пола секунде и зато је,
+   баш при ниском fps-у — дакле тачно кад мерење треба — исписивала саме нуле:
+   до 60 кадрова се дуго не стигне. Уместо анкете сад слушамо `_onMetrics`,
+   који deck.gl зове онда кад бројке заиста постоје. */
 
 function pokreniDijagnostiku() {
   const box = document.createElement("div");
@@ -509,16 +644,19 @@ function pokreniDijagnostiku() {
   document.body.appendChild(box);
 
   const brojke = box.querySelector("#dg-brojke");
-  setInterval(() => {
-    const m = dek.metrics || {};
+  let kadrova = 0;
+  const ispisi = (m) => {
     const r = (v) => Number.isFinite(v) ? v.toFixed(1) : "—";
     brojke.innerHTML =
       "fps        <b>" + r(m.fps) + "</b><br>" +
       "gpu/frame  " + r(m.gpuTimePerFrame) + " ms<br>" +
       "cpu/frame  " + r(m.cpuTimePerFrame) + " ms<br>" +
       "pick       " + r(m.pickTime) + " ms / " + (m.pickCount || 0) + "×<br>" +
-      "шестоуглова " + (m.drawLayersCount || 0) + " слоја";
-  }, 500);
+      "кадрова    " + (kadrova += 60) + "<br>" +
+      "ћелија     " + (D ? D.n.toLocaleString("sr-RS") : "—");
+  };
+  brojke.textContent = "чекам 60 кадрова…";
+  dek.setProps({ _onMetrics: ispisi });
 
   box.querySelector("#dg-pik").addEventListener("change", (e) => {
     pikovanje = e.target.checked; osvezi();
