@@ -521,6 +521,10 @@ function slojevi() {
 
       material: MATERIJAL,
       pickable: pikovanje,
+      onClick: (info) => {
+        if (info && info.index >= 0) { probodi(info.index); return true; }
+        return false;
+      },
       updateTriggers: {
         getFillColor: t + "/" + bojaRezim,
         getElevation: t,
@@ -533,6 +537,25 @@ function slojevi() {
       transitions: prelazi
         ? { getElevation: KORAK_ANIMACIJE, getFillColor: KORAK_ANIMACIJE }
         : {}
+    }),
+
+    /* Ознаке пробода: равне шестоугаоне плочице на тлу, испод самог стуба.
+       Цртају се без провере дубине, као и обрис границе, па се виде и кад је
+       стуб висок и кад је поглед нагнут. Нису извучене а стуб јесте, па
+       ниједна не заклања боју коју ћелија носи. */
+    new ColumnLayer({
+      id: "probodi",
+      data: probodeni,
+      diskResolution: 6,
+      radius: poluprecnik,
+      angle: 0,
+      extruded: false,
+      coverage: 1,
+      getPosition: k => [D.mreza.lon[k], D.mreza.lat[k]],
+      getFillColor: k => bojaProboda(k).concat(235),
+      pickable: false,
+      parameters: { depthTest: false },
+      updateTriggers: { getFillColor: probodeni.join(",") }
     })
   ];
 }
@@ -611,6 +634,138 @@ const dek = new DeckGL(Object.assign({
 
 /* ---------- управљање ---------- */
 
+/* ---------- пробод: кретање изабране ћелије ----------
+   Приказ носи свих 96 месеци, али у сваком тренутку показује само један.
+   Питање које се о ценовној површини заправо поставља — „шта се овде дешавало
+   свих ових година“ — на њој се дотад могло одговорити само вучењем клизача
+   напред-назад и памћењем боја.
+
+   Клик на ћелију је зато прободе: њен цео низ се исцрта у плочи. Подаци су
+   ионако већ у меморији (D.cene[mesec * n + celija]), па ово ништа не учитава
+   и ништа не рачуна унапред.
+
+   Боје пробода су намерно ван обе палете карте, да се не мешају са вредношћу. */
+
+const BOJE_PROBODA = [
+  [255, 255, 255],
+  [235, 120, 220],
+  [150, 240, 120]
+];
+const NAJVISE_PROBODA = BOJE_PROBODA.length;
+
+let probodeni = [];   // индекси ћелија, најстарији први
+
+function probodi(k) {
+  const i = probodeni.indexOf(k);
+  if (i > -1) probodeni.splice(i, 1);                 // други клик скида
+  else {
+    probodeni.push(k);
+    if (probodeni.length > NAJVISE_PROBODA) probodeni.shift();
+  }
+  osvezi();
+}
+
+function bojaProboda(k) {
+  return BOJE_PROBODA[probodeni.indexOf(k) % BOJE_PROBODA.length];
+}
+
+/* Низ цена једне ћелије кроз све месеце. */
+function nizCelije(k) {
+  const out = new Float32Array(M);
+  for (let i = 0; i < M; i++) out[i] = D.cene[i * D.n + k];
+  return out;
+}
+
+function crtajNizove() {
+  const platno = document.getElementById("niz");
+  const spisak = document.getElementById("pribodene");
+  const uput = document.getElementById("uput-niz");
+  if (!platno || !spisak) return;
+
+  /* Резолуција платна прати екран, иначе је линија мутна на ретина екрану. */
+  const gustina = window.devicePixelRatio || 1;
+  const sirina = platno.clientWidth || 264;
+  const visina = 66;
+  if (platno.width !== Math.round(sirina * gustina)) {
+    platno.width = Math.round(sirina * gustina);
+    platno.height = Math.round(visina * gustina);
+  }
+  const c = platno.getContext("2d");
+  c.setTransform(gustina, 0, 0, gustina, 0, 0);
+  c.clearRect(0, 0, sirina, visina);
+
+  if (uput) uput.style.display = probodeni.length ? "none" : "";
+  spisak.innerHTML = "";
+
+  if (!probodeni.length) {
+    c.strokeStyle = "rgba(160,167,180,.25)";
+    c.beginPath(); c.moveTo(0, visina - 8); c.lineTo(sirina, visina - 8); c.stroke();
+    return;
+  }
+
+  const nizovi = probodeni.map(nizCelije);
+
+  let vmin = Infinity, vmax = -Infinity;
+  for (const niz of nizovi) {
+    for (let i = 0; i < M; i++) {
+      if (niz[i] < vmin) vmin = niz[i];
+      if (niz[i] > vmax) vmax = niz[i];
+    }
+  }
+  if (!(vmax > vmin)) { vmax = vmin + 1; }
+
+  const gore = 10, dole = visina - 12;
+  const uX = (i) => (M > 1 ? (i / (M - 1)) * (sirina - 1) : 0);
+  const uY = (v) => dole - ((v - vmin) / (vmax - vmin)) * (dole - gore);
+
+  /* Усправна линија на текућем месецу — веза између низа и слике на карти. */
+  c.strokeStyle = "rgba(209,55,78,.75)";
+  c.lineWidth = 1;
+  c.beginPath(); c.moveTo(uX(t) + 0.5, 0); c.lineTo(uX(t) + 0.5, dole); c.stroke();
+
+  c.strokeStyle = "rgba(160,167,180,.28)";
+  c.beginPath(); c.moveTo(0, dole + 0.5); c.lineTo(sirina, dole + 0.5); c.stroke();
+
+  nizovi.forEach((niz, red) => {
+    const b = BOJE_PROBODA[red % BOJE_PROBODA.length];
+    c.strokeStyle = "rgb(" + b[0] + "," + b[1] + "," + b[2] + ")";
+    c.lineWidth = 1.4;
+    c.beginPath();
+    for (let i = 0; i < M; i++) {
+      const x = uX(i), y = uY(niz[i]);
+      if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
+    }
+    c.stroke();
+    /* Тачка на текућем месецу */
+    c.fillStyle = c.strokeStyle;
+    c.beginPath(); c.arc(uX(t), uY(niz[t]), 2.2, 0, Math.PI * 2); c.fill();
+  });
+
+  c.fillStyle = "rgb(140,148,160)";
+  c.font = "9.5px Helvetica, Arial, sans-serif";
+  c.textBaseline = "top";
+  c.fillText(Math.round(vmax) + " €", 0, 0);
+  c.textBaseline = "bottom";
+  c.fillText(Math.round(vmin) + " €", 0, visina);
+  c.textAlign = "right";
+  c.fillText(MESECI[M - 1], sirina, visina);
+  c.textAlign = "left";
+
+  probodeni.forEach((k, red) => {
+    const b = BOJE_PROBODA[red % BOJE_PROBODA.length];
+    const red_ = document.createElement("div");
+    red_.className = "pribod";
+    red_.innerHTML =
+      '<span class="tacka" style="background:rgb(' + b.join(",") + ')"></span>' +
+      '<span class="mesto">' + D.mreza.lat[k].toFixed(3) + ", " +
+      D.mreza.lon[k].toFixed(3) + "</span>" +
+      '<span class="cena">' + Math.round(cenaSad[k]) + " €</span>" +
+      '<button class="skini" type="button" aria-label="Скини">×</button>';
+    red_.querySelector(".skini").addEventListener("click", () => probodi(k));
+    spisak.appendChild(red_);
+  });
+}
+
 /* ---------- легенда ----------
    Трака је прелив, не шест поља, јер је и боја на карти сад непрекидна.
    Натпис и оса прате изабрани режим. */
@@ -663,6 +818,8 @@ function osvezi() {
     koliko ? "+" + Math.round((imax - 1) * 100) + " %" : "—";
   document.getElementById("prikazano").textContent =
     koliko.toLocaleString("sr-RS");
+
+  crtajNizove();
 }
 
 function veziKlizac(id, naStanje, prikaz) {

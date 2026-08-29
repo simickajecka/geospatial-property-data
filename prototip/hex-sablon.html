@@ -85,6 +85,24 @@ button.radi { background: #d1374e; border-color: #d1374e; color: #fff; }
 .brojka { display: flex; justify-content: space-between; margin-top: 3px; }
 .brojka span:last-child { font-variant-numeric: tabular-nums; font-weight: bold; color: #fff; }
 
+/* --- кретање изабраних ћелија --- */
+#niz { display: block; width: 100%; height: 66px; }
+#pribodene:empty { display: none; }
+.pribod {
+  display: grid; grid-template-columns: 10px 1fr auto auto; gap: 7px;
+  align-items: center; margin-top: 4px; font-size: 11px;
+}
+.pribod .tacka { width: 9px; height: 9px; border-radius: 50%; }
+.pribod .mesto { color: rgb(140,148,160); font-variant-numeric: tabular-nums;
+                 overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pribod .cena { color: #fff; font-variant-numeric: tabular-nums; font-weight: bold; }
+.pribod .skini {
+  appearance: none; background: none; border: 0; padding: 0 2px; cursor: pointer;
+  color: rgb(140,148,160); font-size: 13px; line-height: 1;
+}
+.pribod .skini:hover { color: #fff; }
+.uput { margin: 6px 0 0; font-size: 10.5px; color: rgb(120,128,140); }
+
 .napomena {
   margin: 12px 0 0; padding: 7px 9px; background: rgba(224,168,56,.13);
   color: #e0b464; border-left: 3px solid #e0a838; font-size: 11px; line-height: 1.45;
@@ -185,6 +203,13 @@ button.radi { background: #d1374e; border-color: #d1374e; color: #fff; }
     <i style="height:65%"></i><i style="height:83%"></i><i style="height:100%"></i>
   </div>
   <div class="osa"><span>1,00</span><span>2,20</span></div>
+
+  <hr class="crta">
+
+  <p class="naslovak" style="margin-top:12px">Кретање изабраних ћелија</p>
+  <canvas id="niz" width="264" height="66"></canvas>
+  <div id="pribodene"></div>
+  <p class="uput" id="uput-niz">Кликните на ћелију да јој видите свих 96 месеци.</p>
 
   <hr class="crta">
 
