@@ -14,6 +14,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 
 const arg = (ime, podr) => {
   const i = process.argv.indexOf('--' + ime);
@@ -131,25 +132,45 @@ if (mlJs && fs.existsSync(mlJs)) {
  * za konverziju, a ceo ostatak lanca ostaje nepromenjen — isti format koji
  * generisi.js proizvodi i na kome je sve vec isprobano.
  *
- * PAKOVANJE — jedan bafer, pa base64:
+ * PAKOVANJE — jedan bafer, pa gzip, pa base64:
  *
- *   "RGZ1"       4 B     potpis, da se pokvaren blok odmah prepozna
+ *   "RGZ2"       4 B     potpis, da se pokvaren blok odmah prepozna
  *   n            4 B     uint32 LE   broj tacaka
  *   M            4 B     uint32 LE   broj meseci
+ *   kod          1 B     0 = cene kao uint16, 1 = baza uint16 + delta int8
+ *   rezerva      3 B     poravnanje na 16, nule
  *   lon[n]       4n B    int32 LE    stepeni x 1e6 (oko 11 cm tacnosti)
  *   lat[n]       4n B    int32 LE
- *   cene[n*M]    2nM B   uint16 LE   mesec-major, isto kao cene.bin
+ *   cene         kod 0:  2nM B      uint16 LE, mesec-major
+ *                kod 1:  2n B       uint16 LE cene prvog meseca
+ *                      + n(M-1) B   int8 razlika prema prethodnom mesecu
+ *
+ * ZASTO DELTA I GZIP. Cena jedne tacke se iz meseca u mesec pomeri za
+ * nekoliko evra, ne za nekoliko stotina — razlika staje u jedan bajt umesto
+ * u dva, a niz malih brojeva se i mnogo bolje sazima. base64 je i dalje 33%
+ * veci od binarnog, ali sad od mnogo manjeg binarnog. Izmereno na fajlovima
+ * koje pise generisi.js:
+ *
+ *   korak    sirovo    gzip     delta+gzip   base64 od toga   ukupan HTML
+ *   3 km     1,86 MB   1,04 MB   0,53 MB      0,70 MB          3,2 MB
+ *   1,5 km   7,68 MB   4,3  MB   2,2  MB      2,9  MB          5,4 MB
+ *   0,5 km  66,84 MB  32,40 MB  18,24 MB     24,32 MB          trazi server
+ *
+ * Sa ovim korak od 1,5 km — cetiri puta gusca mreza — staje u manji fajl
+ * nego sto je ranije zauzimao korak od 3 km.
+ *
+ * KAD DELTA NE PROLAZI. Kod stvarnih podataka jedan skok preko 127 EUR/m2
+ * izmedju dva meseca je dovoljan da razlika ne stane u int8, a greska bi se
+ * odatle nagomilavala do kraja niza. Zato se posle pakovanja uvek raspakuje
+ * nazad, tacno onako kako to radi pregledac, i uporedi sa izvorom. Ako se ne
+ * poklapa bajt u bajt, pakovanje samo prelazi na kod 0 i to ispise. Format
+ * se bira po rezultatu provere, ne po pretpostavci.
  *
  * Indeks se NE pakuje — racuna se u pregledacu kao odnos prema prvom
  * mesecu, pa se ista stvar ne drzi u fajlu dvaput.
  *
- * MERA: base64 je 33% veci od binarnog, ali je jedini nacin da blok
- * prezivi u HTML-u bez zasebnog fajla.
- *
- *   korak    tacaka     binarno   base64   ukupan HTML
- *   3 km      10.150     1,9 MB   2,6 MB    5,0 MB   udobno   <- izmereno
- *   1,5 km    40.568     7,7 MB  10,3 MB   12,8 MB   tesko ali radi
- *   0,5 km   365.017    69,6 MB  92,8 MB       —     trazi server
+ * U HTML ide samo podatak, bez ijedne linije koda: window.PODACI_PAKET.
+ * Raspakivanje je u hex-app.js, gde se moze i procitati i menjati.
  * ================================================================== */
 
 function spakujPodatke(folder) {
@@ -190,55 +211,97 @@ function spakujPodatke(folder) {
   }
 
   /* cene.bin — uint16 LE, mesec-major; preuzima se bajt u bajt. */
-  const cene = fs.readFileSync(uz('cene.bin'));
-  if (cene.length !== n * M * 2) {
-    throw new Error('--podaci: cene.bin ima ' + cene.length + ' B, ocekivano ' + (n * M * 2));
+  const sirove = fs.readFileSync(uz('cene.bin'));
+  if (sirove.length !== n * M * 2) {
+    throw new Error('--podaci: cene.bin ima ' + sirove.length + ' B, ocekivano ' + (n * M * 2));
+  }
+  const cene = new Uint16Array(sirove.buffer, sirove.byteOffset, n * M);
+
+  /* Zaglavlje i koordinate su isti za oba koda; cene se dopisuju posle.
+     Zaglavlje je 16 B da pomeraj cena (16 + 8n) ostane deljiv sa 2, sto
+     Uint16Array pogled i trazi. */
+  const ZAGLAVLJE = 16;
+  function pocetak(kod, duzinaCena) {
+    const b = Buffer.alloc(ZAGLAVLJE + n * 8 + duzinaCena);
+    b.write('RGZ2', 0, 'latin1');
+    b.writeUInt32LE(n, 4);
+    b.writeUInt32LE(M, 8);
+    b.writeUInt8(kod, 12);
+    let o = ZAGLAVLJE;
+    for (let i = 0; i < n; i++) { b.writeInt32LE(lon[i], o); o += 4; }
+    for (let i = 0; i < n; i++) { b.writeInt32LE(lat[i], o); o += 4; }
+    return { b, o };
   }
 
-  const buf = Buffer.allocUnsafe(12 + n * 8 + n * M * 2);
-  buf.write('RGZ1', 0, 'latin1');
-  buf.writeUInt32LE(n, 4);
-  buf.writeUInt32LE(M, 8);
-  let o = 12;
-  for (let i = 0; i < n; i++) { buf.writeInt32LE(lon[i], o); o += 4; }
-  for (let i = 0; i < n; i++) { buf.writeInt32LE(lat[i], o); o += 4; }
-  cene.copy(buf, o);
+  /* --- kod 1: prvi mesec pun, ostali kao razlika --- */
+  let zasicenja = 0;
+  const delta = pocetak(1, n * 2 + n * (M - 1));
+  {
+    let o = delta.o;
+    for (let k = 0; k < n; k++) { delta.b.writeUInt16LE(cene[k], o); o += 2; }
+    for (let i = 1; i < M; i++) {
+      for (let k = 0; k < n; k++) {
+        let r = cene[i * n + k] - cene[(i - 1) * n + k];
+        if (r > 127) { r = 127; zasicenja++; }
+        else if (r < -128) { r = -128; zasicenja++; }
+        delta.b.writeInt8(r, o++);
+      }
+    }
+  }
+
+  /* Provera: raspakuj nazad tacno onako kako to radi pregledac i uporedi sa
+     izvorom. Jedno zasicenje bi se odatle prenosilo do kraja niza, pa se
+     format bira po ovom rezultatu, ne po broju zasicenja. */
+  let odstupanje = 0;
+  {
+    const tek = new Uint16Array(n);
+    let o = delta.o;
+    for (let k = 0; k < n; k++) { tek[k] = delta.b.readUInt16LE(o); o += 2; }
+    for (let k = 0; k < n; k++) {
+      const d = Math.abs(tek[k] - cene[k]);
+      if (d > odstupanje) odstupanje = d;
+    }
+    for (let i = 1; i < M; i++) {
+      for (let k = 0; k < n; k++) {
+        tek[k] = (tek[k] + delta.b.readInt8(o++)) & 0xffff;
+        const d = Math.abs(tek[k] - cene[i * n + k]);
+        if (d > odstupanje) odstupanje = d;
+      }
+    }
+  }
+
+  let izabran, kodPakovanja;
+  if (odstupanje === 0) {
+    izabran = delta.b;
+    kodPakovanja = 1;
+  } else {
+    const sirov = pocetak(0, n * M * 2);
+    sirove.copy(sirov.b, sirov.o);
+    izabran = sirov.b;
+    kodPakovanja = 0;
+  }
+
+  const spakovano = zlib.gzipSync(izabran, { level: 9 });
 
   /* Napomena putuje uz podatke: sto meta.json kaze o sebi, to prikaz ispise
      u ploci. Fajl tako nikad ne tvrdi nesto drugo nego sto zaista nosi. */
   const napomena = meta.napomena || '';
 
-  const dekoder = [
-    '(function () {',
-    '  var B64 = "' + buf.toString('base64') + '";',
-    '  var sirovo = atob(B64);',
-    '  var bajti = new Uint8Array(sirovo.length);',
-    '  for (var i = 0; i < sirovo.length; i++) bajti[i] = sirovo.charCodeAt(i);',
-    '  var dv = new DataView(bajti.buffer);',
-    '  if (String.fromCharCode(bajti[0], bajti[1], bajti[2], bajti[3]) !== "RGZ1") {',
-    '    throw new Error("Ugradjeni podaci nisu u ocekivanom formatu");',
-    '  }',
-    '  var n = dv.getUint32(4, true), M = dv.getUint32(8, true);',
-    '  var lon = new Float64Array(n), lat = new Float64Array(n), o = 12, k;',
-    '  for (k = 0; k < n; k++) { lon[k] = dv.getInt32(o, true) / 1e6; o += 4; }',
-    '  for (k = 0; k < n; k++) { lat[k] = dv.getInt32(o, true) / 1e6; o += 4; }',
-    '  /* Cene se citaju pogledom na isti bafer, bez kopije. Pogled uzima',
-    '     redosled bajtova procesora; svi danasnji pregledaci su little-endian,',
-    '     a grana za obrnuti redosled stoji reda radi. Pomeraj 12 + 8n je uvek',
-    '     paran, sto Uint16Array pogled i trazi. */',
-    '  var LE = new Uint8Array(new Uint16Array([1]).buffer)[0] === 1, cene;',
-    '  if (LE) { cene = new Uint16Array(bajti.buffer, o, n * M); }',
-    '  else {',
-    '    cene = new Uint16Array(n * M);',
-    '    for (k = 0; k < n * M; k++) cene[k] = dv.getUint16(o + k * 2, true);',
-    '  }',
-    '  window.PODACI = { n: n, M: M, lon: lon, lat: lat, cene: cene,',
-    '    meseci: ' + JSON.stringify(meta.meseci) + ',',
-    '    napomena: ' + JSON.stringify(napomena) + ' };',
-    '})();'
-  ].join('\n');
+  /* U HTML ide samo podatak. `<` se izlazi jer bi ga napomena iz meta.json
+     mogla uneti i prekinuti <script> blok; base64 abeceda ga nema, pa se
+     sam niz time ne menja. */
+  const kod = 'window.PODACI_PAKET=' + JSON.stringify({
+    b64: spakovano.toString('base64'),
+    meseci: meta.meseci,
+    napomena: napomena
+  }).replace(/</g, '\\u003c') + ';';
 
-  return { kod: dekoder, n: n, M: M, napomena: napomena };
+  return {
+    kod, n, M, napomena, kodPakovanja, zasicenja, odstupanje,
+    sirovoB: sirove.length,
+    spakovanoB: spakovano.length,
+    ukupnoB: Buffer.byteLength(kod)
+  };
 }
 
 const podaciFolder = arg('podaci', null);
@@ -393,9 +456,23 @@ console.log('deck.gl bandl : ' + deckPut);
 console.log('  deck.gl     ' + mb(deckKod));
 console.log('  generator   ' + mb(generatorZaWeb));
 if (podaciOpis) {
+  const mbB = (b) => (b / 1048576).toFixed(2) + ' MB';
   console.log('  podaci      ' + mb(podaciTag) +
     '   (' + podaciOpis.n.toLocaleString('sr-RS') + ' tacaka x ' +
     podaciOpis.M + ' meseci)');
+  console.log('    sirovo    ' + mbB(podaciOpis.sirovoB) +
+    '  ->  spakovano ' + mbB(podaciOpis.spakovanoB) +
+    '  ->  base64 ' + mbB(podaciOpis.ukupnoB) +
+    '   (x' + (podaciOpis.sirovoB / podaciOpis.spakovanoB).toFixed(1) + ')');
+  console.log('    format    kod ' + podaciOpis.kodPakovanja + ' — ' +
+    (podaciOpis.kodPakovanja === 1
+      ? 'baza uint16 + delta int8, provera prosla'
+      : 'cene uint16, bez delte'));
+  if (podaciOpis.kodPakovanja === 0) {
+    console.log('    PAZNJA    delta nije prosla proveru: najvece odstupanje ' +
+      podaciOpis.odstupanje + ' EUR/m2, zasicenja ' + podaciOpis.zasicenja +
+      '. Ide sirov zapis, fajl je veci ali tacan.');
+  }
   console.log('  napomena    ' + (podaciOpis.napomena || '(nema)'));
 }
 console.log('  aplikacija  ' + mb(app));

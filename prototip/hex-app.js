@@ -55,10 +55,14 @@ const KORAK_KM = 1.5;
 
 /* Стварни подаци, ако су уграђени у фајл (napravi-hex.js --podaci).
    Кад их нема — а подразумевано их нема — мрежа и серија се рачунају
-   генератором, тачно као досад. */
-const PODACI = (typeof window !== "undefined" && window.PODACI) || null;
+   генератором, тачно као досад.
 
-const MESECI = PODACI ? PODACI.meseci : G.oznakeMeseci();
+   Уграђени блок носи само податак: спискове месеци и напомену одмах, а
+   координате и цене спаковане у base64. Распакивање је ниже, у raspakuj(). */
+const PAKET = (typeof window !== "undefined" && window.PODACI_PAKET) || null;
+let PODACI = null;
+
+const MESECI = PAKET ? PAKET.meseci : G.oznakeMeseci();
 const M = MESECI.length;
 
 const CENA_MIN = 1000, CENA_MAX = 2700;
@@ -162,6 +166,77 @@ function izGeneratora() {
     }
   }
   return { mreza, cene, indeks };
+}
+
+/* ---------- распакивање уграђеног блока ----------
+   Облик записа описан је у napravi-hex.js, изнад spakujPodatke — тамо се и
+   пише. Гзип скида DecompressionStream, који прегледач већ има, па за ово
+   не треба ниједна спољна библиотека.
+
+   Цео посао је двоструко јефтинији него што изгледа: блок је спакован
+   тако да се цене после првог месеца чувају као разлика према претходном,
+   а разлика од неколико евра стаје у један бајт уместо у два. */
+
+async function raspakuj(paket) {
+  if (typeof DecompressionStream === "undefined") {
+    throw new Error(
+      "Прегледач нема DecompressionStream, па уграђени подаци не могу да се " +
+      "распакују. Треба Chrome или Edge 80+, Firefox 113+, Safari 16.4+.");
+  }
+
+  const tekst = atob(paket.b64);
+  const spakovano = new Uint8Array(tekst.length);
+  for (let i = 0; i < tekst.length; i++) spakovano[i] = tekst.charCodeAt(i);
+
+  const tok = new Blob([spakovano]).stream()
+    .pipeThrough(new DecompressionStream("gzip"));
+  const bajti = new Uint8Array(await new Response(tok).arrayBuffer());
+
+  const dv = new DataView(bajti.buffer, bajti.byteOffset, bajti.byteLength);
+  const potpis = String.fromCharCode(bajti[0], bajti[1], bajti[2], bajti[3]);
+  if (potpis !== "RGZ2") {
+    throw new Error("Уграђени подаци нису у очекиваном облику (потпис „" + potpis + "“)");
+  }
+
+  const n = dv.getUint32(4, true);
+  const brMeseci = dv.getUint32(8, true);
+  const kod = dv.getUint8(12);
+
+  const lon = new Float64Array(n), lat = new Float64Array(n);
+  let o = 16, k;
+  for (k = 0; k < n; k++) { lon[k] = dv.getInt32(o, true) / 1e6; o += 4; }
+  for (k = 0; k < n; k++) { lat[k] = dv.getInt32(o, true) / 1e6; o += 4; }
+
+  /* Померај 16 + 8n је увек паран, што Uint16Array поглед и тражи. Редослед
+     бајтова се проверава реда ради — сви данашњи прегледачи су little-endian. */
+  const LE = new Uint8Array(new Uint16Array([1]).buffer)[0] === 1;
+  let cene;
+
+  if (kod === 0) {
+    if (LE) {
+      cene = new Uint16Array(bajti.buffer, bajti.byteOffset + o, n * brMeseci);
+    } else {
+      cene = new Uint16Array(n * brMeseci);
+      for (let i = 0; i < n * brMeseci; i++) cene[i] = dv.getUint16(o + i * 2, true);
+    }
+  } else if (kod === 1) {
+    cene = new Uint16Array(n * brMeseci);
+    for (k = 0; k < n; k++) { cene[k] = dv.getUint16(o, true); o += 2; }
+    for (let i = 1; i < brMeseci; i++) {
+      const preth = (i - 1) * n, tek = i * n;
+      for (k = 0; k < n; k++) cene[tek + k] = (cene[preth + k] + dv.getInt8(o++)) & 0xffff;
+    }
+  } else {
+    throw new Error("Непознат код паковања у уграђеним подацима: " + kod);
+  }
+
+  if (brMeseci !== paket.meseci.length) {
+    throw new Error("Уграђени подаци носе " + brMeseci + " месеци, а списак " +
+                    "месеци има " + paket.meseci.length);
+  }
+
+  return { n: n, M: brMeseci, lon: lon, lat: lat, cene: cene,
+           meseci: paket.meseci, napomena: paket.napomena };
 }
 
 /* Уграђени стварни подаци. Носе тачке и цене; индекс се рачуна овде, као
@@ -460,9 +535,17 @@ function pokreniDijagnostiku() {
 
 /* Не користити requestAnimationFrame: у картици која није видљива он се
    не извршава, па се страница никад не иницијализује. */
-setTimeout(() => {
+setTimeout(async () => {
   try {
     procitajParametre();
+
+    /* Уграђени блок се распакује пре свега осталог: тек кад је ту, зна се
+       колико тачака има и шта пише у напомени. */
+    if (PAKET) {
+      const u = document.getElementById("ucitavanje");
+      if (u) u.textContent = "распакујем уграђене податке…";
+      PODACI = await raspakuj(PAKET);
+    }
     pripremi();
 
     /* Број месеци долази из података, не из шаблона — уграђени извод не
