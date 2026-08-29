@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Пет клизача ценовне површине</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,400;7..72,600;7..72,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+:root {
+  --ground: #eceff3;
+  --surface: #ffffff;
+  --surface-2: #f5f7f9;
+  --ink: #141a20;
+  --ink-2: #4b5a67;
+  --ink-3: #7d8b98;
+  --line: #d7dee5;
+  --line-2: #bcc7d1;
+  --accent: #c62f46;
+  --accent-2: #8d2233;
+  --accent-soft: #fbe9ec;
+  --warn: #8a5a10;
+  --warn-soft: #fdf3e0;
+  --warn-line: #e0a838;
+
+  --c1: #0198bd; --c2: #49e3ce; --c3: #d8feb5;
+  --c4: #feedb1; --c5: #fead54; --c6: #d1374e;
+
+  --sp: clamp(1rem, 0.6rem + 1.6vw, 1.6rem);
+  --maxw: 1220px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0d1216;
+    --surface: #151c23;
+    --surface-2: #1b232b;
+    --ink: #e2e9ef;
+    --ink-2: #a3b1be;
+    --ink-3: #77848f;
+    --line: #262f38;
+    --line-2: #38444f;
+    --accent: #f0637a;
+    --accent-2: #ff8a9c;
+    --accent-soft: #2a171c;
+    --warn: #e8b661;
+    --warn-soft: #241d10;
+    --warn-line: #a8802c;
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #0d1216;
+  --surface: #151c23;
+  --surface-2: #1b232b;
+  --ink: #e2e9ef;
+  --ink-2: #a3b1be;
+  --ink-3: #77848f;
+  --line: #262f38;
+  --line-2: #38444f;
+  --accent: #f0637a;
+  --accent-2: #ff8a9c;
+  --accent-soft: #2a171c;
+  --warn: #e8b661;
+  --warn-soft: #241d10;
+  --warn-line: #a8802c;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+
+.omot {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: clamp(1.5rem, 4vw, 3.5rem) var(--sp) 5rem;
+  display: grid;
+  gap: clamp(1.5rem, 4vw, 3rem);
+  grid-template-columns: 1fr;
+}
+@media (min-width: 1040px) {
+  .omot { grid-template-columns: 208px minmax(0, 1fr); align-items: start; }
+}
+
+/* ---------- бочни списак ---------- */
+.rail { display: none; }
+@media (min-width: 1040px) {
+  .rail {
+    display: block;
+    position: sticky;
+    top: 2rem;
+    font-size: 13.5px;
+    line-height: 1.5;
+  }
+}
+.rail-nas {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 10.5px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 0 0 .85rem;
+}
+.rail ol { list-style: none; margin: 0; padding: 0; display: grid; gap: .1rem; }
+.rail a {
+  display: block;
+  padding: .34rem .5rem .34rem .7rem;
+  color: var(--ink-2);
+  text-decoration: none;
+  border-left: 2px solid var(--line);
+  transition: color .15s, border-color .15s;
+}
+.rail a:hover, .rail a:focus-visible { color: var(--accent); border-left-color: var(--accent); }
+.rail a .br {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  color: var(--ink-3);
+  margin-right: .45rem;
+  font-size: 12px;
+}
+
+main { min-width: 0; display: grid; gap: clamp(2rem, 5vw, 3.4rem); }
+
+/* ---------- заглавље ---------- */
+.uvod { display: grid; gap: 1.1rem; }
+.oko {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0;
+}
+h1 {
+  font-family: Literata, Georgia, serif;
+  font-weight: 700;
+  font-size: clamp(2rem, 1.3rem + 3vw, 3.1rem);
+  line-height: 1.08;
+  letter-spacing: -.015em;
+  margin: 0;
+  text-wrap: balance;
+}
+.podnaslov {
+  font-size: clamp(1.02rem, .95rem + .4vw, 1.18rem);
+  color: var(--ink-2);
+  max-width: 62ch;
+  margin: 0;
+}
+
+.napomena {
+  border-left: 3px solid var(--warn-line);
+  background: var(--warn-soft);
+  color: var(--warn);
+  padding: .85rem 1.1rem;
+  font-size: 14.5px;
+  line-height: 1.55;
+  max-width: 68ch;
+}
+.napomena b { color: inherit; }
+
+/* ---------- одељци ---------- */
+section { display: grid; gap: 1.15rem; scroll-margin-top: 2rem; }
+h2 {
+  font-family: Literata, Georgia, serif;
+  font-weight: 600;
+  font-size: clamp(1.4rem, 1.15rem + 1vw, 1.9rem);
+  line-height: 1.2;
+  letter-spacing: -.01em;
+  margin: 0;
+  text-wrap: balance;
+  display: flex;
+  align-items: baseline;
+  gap: .7rem;
+}
+h2 .korak {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: .5em;
+  font-weight: 500;
+  letter-spacing: .1em;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 2px;
+  padding: .18em .5em;
+  white-space: nowrap;
+  flex: none;
+  align-self: center;
+}
+h3 {
+  font-family: "IBM Plex Sans", sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  margin: 0;
+  letter-spacing: .005em;
+}
+p { margin: 0; max-width: 68ch; }
+p + p { margin-top: -.25rem; }
+.vodeci { font-size: 1.06rem; color: var(--ink-2); max-width: 66ch; }
+
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- плоча клизача ---------- */
+.klizac-glava {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem .55rem;
+  align-items: center;
+}
+.znak {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11.5px;
+  letter-spacing: .04em;
+  padding: .26em .6em;
+  border: 1px solid var(--line-2);
+  border-radius: 2px;
+  color: var(--ink-2);
+  background: var(--surface);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.znak b { color: var(--ink); font-weight: 500; }
+.znak.kod { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+
+/* ---------- картице и цртежи ---------- */
+.karta {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: clamp(.9rem, 2.5vw, 1.4rem);
+  display: grid;
+  gap: .8rem;
+}
+.crtez { overflow-x: auto; }
+.crtez svg { display: block; min-width: 100%; height: auto; }
+.opis-crteza {
+  font-size: 13px;
+  color: var(--ink-3);
+  line-height: 1.5;
+  margin: 0;
+  max-width: 72ch;
+}
+
+/* SVG теме */
+.d-linija { stroke: var(--line-2); fill: none; }
+.d-tanka { stroke: var(--line); fill: none; }
+.d-tekst { fill: var(--ink-2); font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11px; }
+.d-tekst-jak { fill: var(--ink); font-family: "IBM Plex Sans", sans-serif; font-size: 12.5px; font-weight: 600; }
+.d-tacka { fill: var(--ink-3); }
+.d-akcenat { stroke: var(--accent); fill: none; }
+.d-akcenat-p { fill: var(--accent); }
+
+/* ---------- формула ---------- */
+.formula {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 14px;
+  line-height: 1.75;
+  white-space: pre;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: 2px;
+  padding: .85rem 1.1rem;
+  overflow-x: auto;
+  font-variant-numeric: tabular-nums;
+}
+.formula .k { color: var(--ink-3); }
+
+/* ---------- табеле ---------- */
+.tabela-omot { overflow-x: auto; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+caption {
+  caption-side: top;
+  text-align: left;
+  font-size: 12px;
+  color: var(--ink-3);
+  padding: .7rem 1rem .1rem;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  letter-spacing: .04em;
+}
+th, td { padding: .5rem .9rem; text-align: right; border-bottom: 1px solid var(--line); }
+th:first-child, td:first-child { text-align: left; }
+thead th {
+  font-weight: 500;
+  font-size: 11.5px;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  border-bottom: 1px solid var(--line-2);
+  white-space: nowrap;
+}
+tbody tr:last-child td { border-bottom: 0; }
+td { font-variant-numeric: tabular-nums; color: var(--ink-2); }
+td:first-child { color: var(--ink); font-weight: 500; }
+tr.istaknut td { background: var(--accent-soft); color: var(--ink); }
+tr.istaknut td:first-child { color: var(--ink); }
+
+/* ---------- списак ---------- */
+ul.tacke { margin: 0; padding: 0; list-style: none; display: grid; gap: .55rem; max-width: 68ch; }
+ul.tacke li { padding-left: 1.15rem; position: relative; }
+ul.tacke li::before {
+  content: "";
+  position: absolute;
+  left: 0; top: .62em;
+  width: 6px; height: 6px;
+  border: 1px solid var(--accent);
+  transform: rotate(45deg);
+}
+
+kbd, code {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: .88em;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: .08em .35em;
+}
+
+/* ---------- снимци ---------- */
+.snimci { display: grid; gap: .7rem; }
+.snimak {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: .2rem .9rem;
+  align-items: baseline;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: .85rem 1.1rem;
+}
+.snimak .oznaka {
+  grid-row: span 2;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 10.5px;
+  letter-spacing: .1em;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 2px;
+  padding: .2em .45em;
+  white-space: nowrap;
+  align-self: center;
+}
+.snimak a { font-weight: 500; text-decoration: none; }
+.snimak a:hover { text-decoration: underline; }
+.snimak .zasto { font-size: 13.5px; color: var(--ink-3); grid-column: 2; }
+
+/* ---------- за мејл ---------- */
+.mejl {
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: 3px;
+  display: grid;
+}
+.mejl-glava {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: .7rem 1.1rem;
+  border-bottom: 1px solid var(--line);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.mejl button {
+  font: inherit;
+  letter-spacing: .08em;
+  background: transparent;
+  border: 1px solid var(--line-2);
+  border-radius: 2px;
+  color: var(--ink-2);
+  padding: .3em .7em;
+  cursor: pointer;
+}
+.mejl button:hover { border-color: var(--accent); color: var(--accent); }
+.mejl pre {
+  margin: 0;
+  padding: 1.1rem;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 13px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  color: var(--ink);
+  overflow-x: auto;
+}
+
+hr.crta { border: 0; border-top: 1px solid var(--line); margin: 0; }
+
+footer {
+  color: var(--ink-3);
+  font-size: 13px;
+  border-top: 1px solid var(--line);
+  padding-top: 1.2rem;
+  max-width: 68ch;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
+</style>
+</head>
+<body>
+<div class="omot">
+
+  <nav class="rail" aria-label="Садржај">
+    <p class="rail-nas">Садржај</p>
+    <ol>
+      <li><a href="#osnova"><span class="br">00</span>Основа</a></li>
+      <li><a href="#tok"><span class="br">—</span>Ток</a></li>
+      <li><a href="#naseljeno"><span class="br">01</span>Насељени део</a></li>
+      <li><a href="#precnik"><span class="br">02</span>Пречник</a></li>
+      <li><a href="#percentil"><span class="br">03</span>Горњи перцентил</a></li>
+      <li><a href="#pokrivenost"><span class="br">04</span>Попуњеност</a></li>
+      <li><a href="#visina"><span class="br">05</span>Висина</a></li>
+      <li><a href="#nemenja"><span class="br">—</span>Шта не мењају</a></li>
+      <li><a href="#adresa"><span class="br">—</span>Преко адресе</a></li>
+      <li><a href="#snimci"><span class="br">—</span>Снимци</a></li>
+      <li><a href="#mejl"><span class="br">—</span>Кратко за мејл</a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+    <header class="uvod">
+      <p class="oko">Ценовна површина Србије · управљачка плоча</p>
+      <h1>Пет клизача</h1>
+      <p class="podnaslov">
+        Приказ има пет клизача. Ниједан не дира податке — сви мењају како се
+        исте тачке групишу, бирају и цртају. Овде пише шта тачно мења сваки,
+        са рачуном иза тога и бројкама из самог генератора.
+      </p>
+      <div class="napomena">
+        <b>Бројке су синтетичке.</b> Долазе из генератора са фиксним семеном и
+        служе да се види како приказ ради. Не смеју се употребити за процену
+        вредности ни за поређење подручја.
+      </div>
+    </header>
+
+    <hr class="crta">
+
+    <!-- ================= ОСНОВА ================= -->
+    <section id="osnova">
+      <h2>Основа: шта се уопште црта</h2>
+      <p class="vodeci">
+        Пре клизача треба знати шта постоји испод њих. Приказ има једну мрежу
+        тачака и два правила пресликавања — једно за боју, једно за висину.
+      </p>
+
+      <ul class="tacke">
+        <li><b>Мрежа.</b> Тачка на сваких <b>1,5 km</b> унутар приближне границе Србије —
+          укупно <b>40.568</b> тачака, што покрива око <b>91.278 km²</b>.</li>
+        <li><b>Серија.</b> Свака тачка носи цену у €/m² и индекс кретања
+          (01/2019 = 1) за сваки од <b>96 месеци</b>, од 2019-01 до 2026-12.</li>
+        <li><b>Ћелија.</b> deck.gl слаже тачке у шестоуглове. За сваку ћелију узима
+          <b>просек</b> — просек цена даје боју, просек индекса даје висину.</li>
+      </ul>
+
+      <div class="formula">боја ћелије  <span class="k">=</span> квантизуј( просек цена у ћелији , 1.000 … 2.700 € , 6 боја )
+             <span class="k">→ један корак боје = (2.700 − 1.000) / 6 = 283,3 €</span>
+
+висина       <span class="k">=</span> Висина × 3.000 m × ( просек индекса − 1,00 ) / 1,20</div>
+
+      <p>
+        Опсег боја је <b>фиксиран</b> на 1.000–2.700 €, а опсег висине на индекс
+        1,00–2,20. То значи да боја и висина увек значе исто, без обзира на то
+        како су клизачи подешени — упоредив је и приказ од јуче и приказ од данас.
+      </p>
+    </section>
+
+    <!-- ================= ТОК ================= -->
+    <section id="tok">
+      <h2>Ток: где који клизач делује</h2>
+      <p class="vodeci">
+        Клизачи не делују сви на истом месту. Три раде пре цртања — један бира
+        тачке, један их групише, један склања готове ћелије — а два мењају само
+        облик онога што се црта.
+      </p>
+
+      <div class="karta">
+        <div class="crtez" id="crtez-tok"></div>
+        <p class="opis-crteza">
+          Редослед у плочи је другачији од редоследа деловања. У плочи иду
+          Пречник, Попуњеност, Горњи перцентил, Висина, Насељени део; делују
+          редом који је горе.
+        </p>
+      </div>
+    </section>
+
+    <!-- ================= 1. НАСЕЉЕНИ ДЕО ================= -->
+    <section id="naseljeno">
+      <h2><span class="korak">Корак 1</span> Насељени део</h2>
+
+      <div class="klizac-glava">
+        <span class="znak">опсег <b>3 – 100 %</b></span>
+        <span class="znak">подразумевано <b>100 %</b></span>
+        <span class="znak kod">филтер над тачкама</span>
+      </div>
+
+      <p class="vodeci">
+        Одлучује <b>које тачке уопште улазе</b> у приказ. Задржава најнасељенијих
+        p % мреже, остало избацује пре груписања.
+      </p>
+
+      <div class="formula">задржано <span class="k">=</span> round( 40.568 × p / 100 )        <span class="k">p = 100 % → 40.568   p = 30 % → 12.170   p = 10 % → 4.057</span>
+
+скор<sub>k</sub> <span class="k">=</span> max<sub>град</sub> ( A · e<sup>−d / (0,5·R)</sup> )  +  0,6 · шум(x,y)³
+      <span class="k">A = тежина града, R = полупречник утицаја, d = растојање до центра, 20 градова</span></div>
+
+      <div class="karta">
+        <div class="crtez" id="crtez-naseljeno"></div>
+        <p class="opis-crteza">
+          Иста мрежа на три подешавања. Тачке су узорак стварне мреже, поредак
+          је стварни скор насељености из генератора.
+        </p>
+      </div>
+
+      <h3>Зашто уопште постоји</h3>
+      <p>
+        Мрежа је правилна, па на 100 % нема ниједне празнине — свака ћелија
+        унутар границе има вредност. Стварни подаци о становима постоје само
+        тамо где има зграда, па имају рупе. Спуштањем овог клизача се унапред
+        види како ће приказ изгледати кад дође прави податак. У правом послу
+        ово место заузима слој зграда или грађевинско подручје.
+      </p>
+
+      <h3>Шта се види у плочи</h3>
+      <p>
+        Ово је једини од пет клизача који мења број у реду <b>Приказано</b>.
+        Ред <b>Тачака мреже</b> остаје 40.568 увек.
+      </p>
+    </section>
+
+    <!-- ================= 2. ПРЕЧНИК ================= -->
+    <section id="precnik">
+      <h2><span class="korak">Корак 2</span> Пречник</h2>
+
+      <div class="klizac-glava">
+        <span class="znak">опсег <b>500 – 20.000 m</b></span>
+        <span class="znak">подразумевано <b>2.000 m</b></span>
+        <span class="znak kod">deck.gl <b>radius</b></span>
+      </div>
+
+      <p class="vodeci">
+        Одређује <b>колика је једна ћелија</b> — растојање од средишта шестоугла
+        до темена, у метрима. Тиме одређује и колико се тачака слива у један просек.
+      </p>
+
+      <div class="formula">површина ћелије <span class="k">=</span> (3√3 / 2) · r²  <span class="k">≈ 2,598 · r²</span>
+
+тачака по ћелији <span class="k">≈</span> површина ћелије / (1,5 km)²   <span class="k">r = 2 km → 10,39 km² → ≈ 4,6 тачке</span></div>
+
+      <div class="karta">
+        <div class="crtez" id="crtez-precnik"></div>
+        <p class="opis-crteza">
+          Исте тачке мреже, две величине ћелије, исти размерник. Лево 2 km —
+          у ћелији је прегршт тачака. Десно 5 km — у ћелији их је двадесетак.
+        </p>
+      </div>
+
+      <div class="tabela-omot">
+        <table>
+          <caption>Стварна подела мреже од 40.568 тачака</caption>
+          <thead>
+            <tr><th>Пречник</th><th>Ћелија</th><th>Површина ћелије</th><th>Тачака по ћелији</th><th>Највише у једној</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>500 m</td><td>40.568</td><td>0,65 km²</td><td>1,0</td><td>1</td></tr>
+            <tr><td>1.000 m</td><td>35.173</td><td>2,60 km²</td><td>1,2</td><td>2</td></tr>
+            <tr class="istaknut"><td>2.000 m</td><td>8.939</td><td>10,39 km²</td><td>4,5</td><td>7</td></tr>
+            <tr><td>3.000 m</td><td>4.031</td><td>23,38 km²</td><td>10,1</td><td>11</td></tr>
+            <tr><td>5.000 m</td><td>1.499</td><td>64,95 km²</td><td>27,1</td><td>30</td></tr>
+            <tr><td>10.000 m</td><td>402</td><td>259,81 km²</td><td>100,9</td><td>120</td></tr>
+            <tr><td>20.000 m</td><td>114</td><td>1.039,23 km²</td><td>355,9</td><td>478</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Две ствари које се лако превиде</h3>
+      <p>
+        <b>Испод 1,5 km ћелија више ништа не сажима.</b> На 500 m свака ћелија
+        има тачно једну тачку — има их 40.568, колико и тачака. Просек тада
+        нема шта да просекује, а цртање постаје најспорије што може бити.
+      </p>
+      <p>
+        <b>Крупнија ћелија спљоштава распон.</b> Просек вуче ка средини, па се
+        са порастом пречника губе и најјефтиније и најскупље вредности:
+      </p>
+
+      <div class="tabela-omot">
+        <table>
+          <caption>Распон просека по ћелији, месец 2026-12</caption>
+          <thead>
+            <tr><th>Пречник</th><th>Најнижа ћелија</th><th>Највиша ћелија</th><th>Распон</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>сирове тачке</td><td>1.452 €</td><td>2.670 €</td><td>1.219 €</td></tr>
+            <tr class="istaknut"><td>2.000 m</td><td>1.454 €</td><td>2.612 €</td><td>1.157 €</td></tr>
+            <tr><td>5.000 m</td><td>1.460 €</td><td>2.542 €</td><td>1.082 €</td></tr>
+            <tr><td>10.000 m</td><td>1.464 €</td><td>2.360 €</td><td>895 €</td></tr>
+            <tr><td>20.000 m</td><td>1.482 €</td><td>2.284 €</td><td>803 €</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        На 20 km распон је за трећину ужи него у сировим подацима. Приказ и
+        даље ради, али крајње боје палете скоро да се више не појављују.
+      </p>
+    </section>
+
+    <!-- ================= 3. ГОРЊИ ПЕРЦЕНТИЛ ================= -->
+    <section id="percentil">
+      <h2><span class="korak">Корак 3</span> Горњи перцентил</h2>
+
+      <div class="klizac-glava">
+        <span class="znak">опсег <b>80 – 100</b></span>
+        <span class="znak">подразумевано <b>100</b></span>
+        <span class="znak kod">deck.gl <b>upperPercentile</b></span>
+      </div>
+
+      <p class="vodeci">
+        Одређује <b>које се готове ћелије приказују</b>. Ћелије чији је просек
+        изнад прага се не боје другачије — оне <b>нестају</b> са приказа.
+      </p>
+
+      <div class="formula">праг <span class="k">=</span> вредност испод које лежи p % ћелија    <span class="k">(перцентил, по просечној цени)</span>
+
+ћелија се црта  <span class="k">⟺</span>  просек цене ћелије ≤ праг</div>
+
+      <div class="karta">
+        <div class="crtez" id="crtez-percentil"></div>
+        <p class="opis-crteza">
+          Стварна расподела 8.939 ћелија при пречнику 2 km, месец 2026-12.
+          Боја стубића је боја коју би те ћелије добиле на карти.
+        </p>
+      </div>
+
+      <div class="tabela-omot">
+        <table>
+          <caption>Пречник 2.000 m, месец 2026-12, укупно 8.939 ћелија</caption>
+          <thead>
+            <tr><th>Перцентил</th><th>Праг</th><th>Нестаје ћелија</th><th>Удео</th></tr>
+          </thead>
+          <tbody>
+            <tr class="istaknut"><td>100</td><td>—</td><td>0</td><td>0 %</td></tr>
+            <tr><td>99</td><td>2.234 €</td><td>89</td><td>1,0 %</td></tr>
+            <tr><td>98</td><td>2.162 €</td><td>178</td><td>2,0 %</td></tr>
+            <tr><td>95</td><td>2.103 €</td><td>446</td><td>5,0 %</td></tr>
+            <tr><td>90</td><td>2.040 €</td><td>893</td><td>10,0 %</td></tr>
+            <tr><td>80</td><td>1.926 €</td><td>1.787</td><td>20,0 %</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Чему служи, а чему не</h3>
+      <p>
+        У овом приказу је опсег боја фиксиран, па перцентил <b>не мења боје</b>
+        осталим ћелијама — он само склања врх. Користан је кад неколико
+        најскупљих ћелија заклања оно што је испод њих: спуштањем на 95 се
+        уклони 5 % најскупљих стубова и види се терен иза њих.
+      </p>
+      <p>
+        Није алат за чишћење података. Оно што склони није грешка него
+        најскупљи део Србије, па га не треба остављати спуштеног кад се приказ
+        некоме показује.
+      </p>
+    </section>
+
+    <!-- ================= 4. ПОПУЊЕНОСТ ================= -->
+    <section id="pokrivenost">
+      <h2><span class="korak">Корак 4</span> Попуњеност</h2>
+
+      <div class="klizac-glava">
+        <span class="znak">опсег <b>0 – 1</b></span>
+        <span class="znak">подразумевано <b>0,70</b></span>
+        <span class="znak kod">deck.gl <b>coverage</b></span>
+      </div>
+
+      <p class="vodeci">
+        Чисто цртање: <b>колико од ћелије заузима стуб</b>. Не мења ни податке,
+        ни број ћелија, ни боју, ни висину — само дебљину стуба.
+      </p>
+
+      <div class="formula">нацртани полупречник <span class="k">=</span> Попуњеност × Пречник
+
+површина стуба <span class="k">=</span> Попуњеност² × површина ћелије   <span class="k">0,70 → 49 %   0,40 → 16 %</span></div>
+
+      <div class="karta">
+        <div class="crtez" id="crtez-pokrivenost"></div>
+        <p class="opis-crteza">
+          Испрекидано је ћелија, пуно је оно што се црта. Средиште и боја су
+          исти у сва три случаја.
+        </p>
+      </div>
+
+      <p>
+        На 1,00 стубови се додирују и површина изгледа као једна плоча — добро
+        за облик појаве у целини. На 0,70, колико је подразумевано, између
+        стубова остаје размак кроз који се види подлога и висина суседа. Испод
+        0,40 приказ почиње да личи на расуте тачке.
+      </p>
+    </section>
+
+    <!-- ================= 5. ВИСИНА ================= -->
+    <section id="visina">
+      <h2><span class="korak">Корак 5</span> Висина</h2>
+
+      <div class="klizac-glava">
+        <span class="znak">опсег <b>5 – 220</b></span>
+        <span class="znak">подразумевано <b>50</b></span>
+        <span class="znak kod">deck.gl <b>elevationScale</b></span>
+      </div>
+
+      <p class="vodeci">
+        Чисто цртање: <b>колико пута се увећава издизање</b>. Индекс се прво
+        пресликава у метре по фиксном правилу, па се то помножи овим бројем.
+      </p>
+
+      <div class="formula">h <span class="k">=</span> Висина × 3.000 m × ( индекс − 1,00 ) / 1,20
+
+<span class="k">индекс 1,00 → h = 0 без обзира на клизач</span>
+<span class="k">индекс 2,20, Висина 50 → 50 × 3.000 × 1,00 = 150.000 m</span></div>
+
+      <div class="karta">
+        <div class="crtez" id="crtez-visina"></div>
+        <p class="opis-crteza">
+          Пресликавање је право — двоструко већи пораст даје двоструко виши
+          стуб. Осенчено је подручје у ком се стварно налазе ћелије при
+          пречнику 2 km у месецу 2026-12: индекс 1,382 до 2,136.
+        </p>
+      </div>
+
+      <div class="tabela-omot">
+        <table>
+          <caption>Висина стуба у километрима</caption>
+          <thead>
+            <tr><th>Индекс</th><th>Висина 5</th><th>Висина 50</th><th>Висина 220</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>1,00 <span style="color:var(--ink-3)">(нема раста)</span></td><td>0</td><td>0</td><td>0</td></tr>
+            <tr><td>1,38 <span style="color:var(--ink-3)">(најнижа ћелија)</span></td><td>4,8</td><td>47,8</td><td>210,1</td></tr>
+            <tr class="istaknut"><td>1,60</td><td>7,5</td><td>75,0</td><td>330,0</td></tr>
+            <tr><td>2,14 <span style="color:var(--ink-3)">(највиша ћелија)</span></td><td>14,2</td><td>142,0</td><td>624,8</td></tr>
+            <tr><td>2,20 <span style="color:var(--ink-3)">(врх опсега)</span></td><td>15,0</td><td>150,0</td><td>660,0</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        Бројеви су намерно нестварни — 150 km нема никакве везе са тереном.
+        Висина овде није дужина него мера, исто као дужина стубића на
+        обичном графикону. Зато и стоји легенда „Висина — индекс“ поред скале.
+      </p>
+      <p>
+        При отварању стубови израсту од нуле до задате вредности. То је
+        анимација преласка, не подешавање — клизач све време показује коначну
+        вредност.
+      </p>
+    </section>
+
+    <!-- ================= ШТА НЕ МЕЊАЈУ ================= -->
+    <section id="nemenja">
+      <h2>Шта ових пет клизача не мења</h2>
+      <p class="vodeci">
+        Лако је помислити да бројке у дну плоче прате клизаче. Не прате —
+        рачунају се преко целе мреже, за изабрани месец.
+      </p>
+
+      <div class="tabela-omot">
+        <table>
+          <thead>
+            <tr><th>Ред у плочи</th><th>Од чега зависи</th><th>Реагује на пет клизача</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Просечна цена</td><td>месец, свих 40.568 тачака</td><td>не</td></tr>
+            <tr><td>Највећи раст</td><td>месец, свих 40.568 тачака</td><td>не</td></tr>
+            <tr><td>Тачака мреже</td><td>ништа, увек 40.568</td><td>не</td></tr>
+            <tr class="istaknut"><td>Приказано</td><td>Насељени део</td><td>само тај један</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        Ниједан клизач не мења ни саме податке. Цена и индекс за дату тачку и
+        дати месец су исти при сваком подешавању — мења се само како се групишу,
+        који улазе и како изгледају.
+      </p>
+    </section>
+
+    <!-- ================= ПРЕКО АДРЕСЕ ================= -->
+    <section id="adresa">
+      <h2>Готов поглед преко адресе</h2>
+      <p class="vodeci">
+        Сва подешавања могу да стану у адресу, па се готов поглед пошаље
+        линком. Ради и кад је фајл отворен двокликом, преко <code>file://</code>.
+      </p>
+
+      <div class="formula">cenovna-povrsina-3d.html?naseljeno=10&amp;precnik=4000&amp;pokrivenost=0.5&amp;percentil=95&amp;visina=80&amp;mesec=2024-06</div>
+
+      <div class="tabela-omot">
+        <table>
+          <thead>
+            <tr><th>Параметар</th><th>Опсег</th><th>Клизач</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>naseljeno</code></td><td>3 – 100</td><td>Насељени део</td></tr>
+            <tr><td><code>precnik</code></td><td>500 – 20000</td><td>Пречник</td></tr>
+            <tr><td><code>pokrivenost</code></td><td>0 – 1</td><td>Попуњеност</td></tr>
+            <tr><td><code>percentil</code></td><td>80 – 100</td><td>Горњи перцентил</td></tr>
+            <tr><td><code>visina</code></td><td>5 – 220</td><td>Висина</td></tr>
+            <tr><td><code>mesec</code></td><td>2019-01 – 2026-12</td><td>трака времена</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Вредности ван опсега се сасеку на најближу дозвољену, а погрешно
+        написане се прескачу — приказ се отвара са подразумеваним.
+      </p>
+    </section>
+
+    <!-- ================= СНИМЦИ ================= -->
+    <section id="snimci">
+      <h2>Ако неко хоће да се удуби</h2>
+      <p class="vodeci">
+        Четири снимка који покривају појмове иза ових клизача. Ниједан није о
+        овом приказу — о самом поступку су.
+      </p>
+
+      <div class="snimci">
+        <div class="snimak">
+          <span class="oznaka">Пречник</span>
+          <a href="https://www.youtube.com/watch?v=VbZ1qlIlC20" target="_blank" rel="noopener">Hexagonal Binning — RAW: An Introduction</a>
+          <span class="zasto">Шта уопште значи сложити тачке у шестоуглове и зашто се тиме добија читљивија слика него тачкама.</span>
+        </div>
+        <div class="snimak">
+          <span class="oznaka">Пречник</span>
+          <a href="https://www.youtube.com/watch?v=ay2uwtRO3QE" target="_blank" rel="noopener">Tiling the Earth with Hexagons</a>
+          <span class="zasto">Зашто баш шестоугао, а не квадрат: једнака удаљеност свих суседа и мање изобличење при поређењу ћелија.</span>
+        </div>
+        <div class="snimak">
+          <span class="oznaka">Перцентил</span>
+          <a href="https://www.youtube.com/watch?v=DsR4TJ8Dd9E" target="_blank" rel="noopener">Percentiles, Quartiles &amp; Outliers</a>
+          <span class="zasto">Перцентил као праг, и шта значи одсећи горњих 5 % — тачно оно што ради трећи клизач.</span>
+        </div>
+        <div class="snimak">
+          <span class="oznaka">Све</span>
+          <a href="https://www.youtube.com/watch?v=2SN9P5PP0gU" target="_blank" rel="noopener">Hexagon Layer — 3D Geospatial Visualization</a>
+          <span class="zasto">Исти слој deck.gl-а који овај приказ користи, приказан од нуле са истим подешавањима.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= ЗА МЕЈЛ ================= -->
+    <section id="mejl">
+      <h2>Кратко, за мејл</h2>
+      <p class="vodeci">
+        Пет реченица, једна по клизачу — толико је довољно уз сам приказ.
+      </p>
+
+      <div class="mejl">
+        <div class="mejl-glava">
+          <span>спреман текст</span>
+          <button type="button" id="kopiraj">Копирај</button>
+        </div>
+        <pre id="tekst-mejl">Клизачи горе десно мењају само приказ, никад податке:
+
+• Пречник — колика је једна шестоугаона ћелија (2 km подразумевано).
+  Веће поље = крупнија слика, али просек спљошти разлике.
+• Попуњеност — колико од ћелије заузима стуб. Ниже даје размак
+  између стубова, да се види шта је иза њих.
+• Горњи перцентил — склања најскупље ћелије са приказа. На 100
+  се види све; на 95 нестаје 5 % најскупљих.
+• Висина — колико се стубови издижу. Мера, не терен.
+• Насељени део — задржава само најнасељенији део мреже. Мрежа је
+  правилна па на 100 % нема празнина; спуштањем се види како ће
+  приказ изгледати са стварним подацима о становима.
+
+Подешавања могу да стану у адресу, па се готов поглед пошаље линком:
+...?naseljeno=10&amp;precnik=4000&amp;percentil=95&amp;mesec=2024-06</pre>
+      </div>
+    </section>
+
+    <footer>
+      Бројке у табелама нису процењене него израчунате из истог генератора
+      који приказ користи — мрежа од 40.568 тачака, месец 2026-12. Расподела
+      ћелија и поредак насељености су стварни излаз тог рачуна.
+    </footer>
+
+  </main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var PODACI = {"uzorak":[[20.733,41.934,65],[20.826,41.934,49],[20.733,42.002,55],[20.826,42.002,38],[20.92,42.002,27],[21.014,42.002,24],[20.639,42.069,88],[20.733,42.069,80],[20.826,42.069,41],[20.92,42.069,20],[21.014,42.069,18],[21.107,42.069,9],[20.639,42.137,92],[20.733,42.137,88],[20.826,42.137,41],[20.92,42.137,18],[21.014,42.137,18],[21.107,42.137,9],[21.201,42.137,23],[20.545,42.204,91],[20.639,42.204,88],[20.733,42.204,81],[20.826,42.204,49],[20.92,42.204,30],[21.014,42.204,31],[21.107,42.204,25],[21.201,42.204,38],[21.295,42.204,71],[21.388,42.204,90],[20.545,42.272,81],[20.639,42.272,82],[20.733,42.272,66],[20.826,42.272,49],[20.92,42.272,38],[21.014,42.272,38],[21.107,42.272,27],[21.201,42.272,64],[21.295,42.272,77],[21.388,42.272,89],[21.482,42.272,98],[21.576,42.272,98],[21.669,42.272,89],[20.545,42.339,74],[20.639,42.339,77],[20.733,42.339,67],[20.826,42.339,65],[20.92,42.339,58],[21.014,42.339,53],[21.107,42.339,40],[21.201,42.339,56],[21.295,42.339,70],[21.388,42.339,88],[21.482,42.339,97],[21.576,42.339,94],[21.669,42.339,86],[21.763,42.339,64],[21.856,42.339,24],[21.95,42.339,16],[22.044,42.339,14],[22.137,42.339,16],[20.545,42.407,71],[20.639,42.407,74],[20.733,42.407,70],[20.826,42.407,78],[20.92,42.407,71],[21.014,42.407,63],[21.107,42.407,49],[21.201,42.407,39],[21.295,42.407,62],[21.388,42.407,89],[21.482,42.407,96],[21.576,42.407,87],[21.669,42.407,82],[21.763,42.407,68],[21.856,42.407,23],[21.95,42.407,14],[22.044,42.407,16],[22.137,42.407,25],[22.231,42.407,49],[22.325,42.407,83],[20.452,42.474,70],[20.545,42.474,75],[20.639,42.474,78],[20.733,42.474,72],[20.826,42.474,79],[20.92,42.474,66],[21.014,42.474,54],[21.107,42.474,45],[21.201,42.474,48],[21.295,42.474,68],[21.388,42.474,92],[21.482,42.474,97],[21.576,42.474,88],[21.669,42.474,76],[21.763,42.474,53],[21.856,42.474,19],[21.95,42.474,13],[22.044,42.474,23],[22.137,42.474,39],[22.231,42.474,59],[22.325,42.474,82],[20.452,42.542,78],[20.545,42.542,79],[20.639,42.542,75],[20.733,42.542,67],[20.826,42.542,77],[20.92,42.542,74],[21.014,42.542,66],[21.107,42.542,48],[21.201,42.542,49],[21.295,42.542,65],[21.388,42.542,82],[21.482,42.542,82],[21.576,42.542,68],[21.669,42.542,67],[21.763,42.542,51],[21.856,42.542,7],[21.95,42.542,3],[22.044,42.542,13],[22.137,42.542,42],[22.231,42.542,61],[22.325,42.542,74],[20.452,42.609,91],[20.545,42.609,90],[20.639,42.609,76],[20.733,42.609,50],[20.826,42.609,70],[20.92,42.609,78],[21.014,42.609,75],[21.107,42.609,60],[21.201,42.609,56],[21.295,42.609,59],[21.388,42.609,52],[21.482,42.609,30],[21.576,42.609,28],[21.669,42.609,44],[21.763,42.609,36],[21.856,42.609,8],[21.95,42.609,4],[22.044,42.609,7],[22.137,42.609,17],[22.231,42.609,28],[22.325,42.609,46],[22.418,42.609,55],[20.452,42.677,97],[20.545,42.677,97],[20.639,42.677,84],[20.733,42.677,54],[20.826,42.677,73],[20.92,42.677,83],[21.014,42.677,83],[21.107,42.677,70],[21.201,42.677,56],[21.295,42.677,47],[21.388,42.677,25],[21.482,42.677,5],[21.576,42.677,9],[21.669,42.677,26],[21.763,42.677,28],[21.856,42.677,10],[21.95,42.677,11],[22.044,42.677,11],[22.137,42.677,12],[22.231,42.677,14],[22.325,42.677,29],[22.418,42.677,32],[20.452,42.744,98],[20.545,42.744,97],[20.639,42.744,89],[20.733,42.744,81],[20.826,42.744,79],[20.92,42.744,83],[21.014,42.744,86],[21.107,42.744,81],[21.201,42.744,63],[21.295,42.744,44],[21.388,42.744,24],[21.482,42.744,9],[21.576,42.744,7],[21.669,42.744,11],[21.763,42.744,20],[21.856,42.744,19],[21.95,42.744,7],[22.044,42.744,14],[22.137,42.744,34],[22.231,42.744,47],[22.325,42.744,50],[22.418,42.744,27],[20.452,42.812,97],[20.545,42.812,97],[20.639,42.812,92],[20.733,42.812,79],[20.826,42.812,69],[20.92,42.812,69],[21.014,42.812,76],[21.107,42.812,81],[21.201,42.812,64],[21.295,42.812,36],[21.388,42.812,20],[21.482,42.812,13],[21.576,42.812,13],[21.669,42.812,5],[21.763,42.812,6],[21.856,42.812,12],[21.95,42.812,7],[22.044,42.812,11],[22.137,42.812,34],[22.231,42.812,61],[22.325,42.812,51],[22.418,42.812,19],[22.512,42.812,10],[20.358,42.879,98],[20.452,42.879,98],[20.545,42.879,97],[20.639,42.879,93],[20.733,42.879,81],[20.826,42.879,77],[20.92,42.879,71],[21.014,42.879,71],[21.107,42.879,69],[21.201,42.879,51],[21.295,42.879,29],[21.388,42.879,22],[21.482,42.879,20],[21.576,42.879,14],[21.669,42.879,7],[21.763,42.879,9],[21.856,42.879,17],[21.95,42.879,15],[22.044,42.879,15],[22.137,42.879,33],[22.231,42.879,68],[22.325,42.879,46],[22.418,42.879,18],[22.512,42.879,11],[20.264,42.947,88],[20.358,42.947,97],[20.452,42.947,97],[20.545,42.947,97],[20.639,42.947,95],[20.733,42.947,88],[20.826,42.947,87],[20.92,42.947,80],[21.014,42.947,74],[21.107,42.947,53],[21.201,42.947,20],[21.295,42.947,12],[21.388,42.947,15],[21.482,42.947,19],[21.576,42.947,15],[21.669,42.947,26],[21.763,42.947,36],[21.856,42.947,25],[21.95,42.947,12],[22.044,42.947,22],[22.137,42.947,43],[22.231,42.947,74],[22.325,42.947,47],[22.418,42.947,27],[22.512,42.947,24],[22.606,42.947,34],[20.171,43.014,83],[20.264,43.014,86],[20.358,43.014,92],[20.452,43.014,86],[20.545,43.014,85],[20.639,43.014,90],[20.733,43.014,88],[20.826,43.014,83],[20.92,43.014,81],[21.014,43.014,82],[21.107,43.014,62],[21.201,43.014,7],[21.295,43.014,5],[21.388,43.014,10],[21.482,43.014,15],[21.576,43.014,32],[21.669,43.014,56],[21.763,43.014,59],[21.856,43.014,21],[21.95,43.014,3],[22.044,43.014,28],[22.137,43.014,62],[22.231,43.014,67],[22.325,43.014,52],[22.418,43.014,43],[22.512,43.014,44],[22.606,43.014,33],[22.699,43.014,49],[20.077,43.082,92],[20.171,43.082,93],[20.264,43.082,91],[20.358,43.082,84],[20.452,43.082,52],[20.545,43.082,41],[20.639,43.082,72],[20.733,43.082,81],[20.826,43.082,77],[20.92,43.082,63],[21.014,43.082,56],[21.107,43.082,31],[21.201,43.082,14],[21.295,43.082,11],[21.388,43.082,12],[21.482,43.082,6],[21.576,43.082,23],[21.669,43.082,56],[21.763,43.082,70],[21.856,43.082,53],[21.95,43.082,49],[22.044,43.082,57],[22.137,43.082,69],[22.231,43.082,74],[22.325,43.082,61],[22.418,43.082,47],[22.512,43.082,50],[22.606,43.082,62],[22.699,43.082,62],[22.793,43.082,62],[19.89,43.149,93],[19.983,43.149,89],[20.077,43.149,94],[20.171,43.149,91],[20.264,43.149,86],[20.358,43.149,78],[20.452,43.149,23],[20.545,43.149,7],[20.639,43.149,56],[20.733,43.149,67],[20.826,43.149,53],[20.92,43.149,26],[21.014,43.149,16],[21.107,43.149,10],[21.201,43.149,13],[21.295,43.149,12],[21.388,43.149,11],[21.482,43.149,5],[21.576,43.149,16],[21.669,43.149,50],[21.763,43.149,64],[21.856,43.149,61],[21.95,43.149,65],[22.044,43.149,69],[22.137,43.149,77],[22.231,43.149,84],[22.325,43.149,71],[22.418,43.149,43],[22.512,43.149,38],[22.606,43.149,65],[22.699,43.149,70],[22.793,43.149,75],[22.887,43.149,74],[19.702,43.217,98],[19.796,43.217,95],[19.89,43.217,87],[19.983,43.217,91],[20.077,43.217,93],[20.171,43.217,89],[20.264,43.217,82],[20.358,43.217,83],[20.452,43.217,57],[20.545,43.217,51],[20.639,43.217,64],[20.733,43.217,42],[20.826,43.217,18],[20.92,43.217,11],[21.014,43.217,8],[21.107,43.217,7],[21.201,43.217,12],[21.295,43.217,11],[21.388,43.217,10],[21.482,43.217,7],[21.576,43.217,13],[21.669,43.217,40],[21.763,43.217,46],[21.856,43.217,32],[21.95,43.217,34],[22.044,43.217,55],[22.137,43.217,74],[22.231,43.217,85],[22.325,43.217,76],[22.418,43.217,44],[22.512,43.217,34],[22.606,43.217,60],[22.699,43.217,67],[22.793,43.217,74],[22.887,43.217,77],[19.609,43.284,83],[19.702,43.284,89],[19.796,43.284,87],[19.89,43.284,82],[19.983,43.284,80],[20.077,43.284,84],[20.171,43.284,85],[20.264,43.284,83],[20.358,43.284,81],[20.452,43.284,77],[20.545,43.284,71],[20.639,43.284,60],[20.733,43.284,9],[20.826,43.284,1],[20.92,43.284,19],[21.014,43.284,30],[21.107,43.284,28],[21.201,43.284,35],[21.295,43.284,29],[21.388,43.284,19],[21.482,43.284,24],[21.576,43.284,31],[21.669,43.284,44],[21.763,43.284,24],[21.856,43.284,3],[21.95,43.284,4],[22.044,43.284,39],[22.137,43.284,74],[22.231,43.284,77],[22.325,43.284,74],[22.418,43.284,59],[22.512,43.284,55],[22.606,43.284,47],[22.699,43.284,48],[22.793,43.284,60],[19.515,43.351,76],[19.609,43.351,80],[19.702,43.351,86],[19.796,43.351,81],[19.89,43.351,74],[19.983,43.351,64],[20.077,43.351,72],[20.171,43.351,68],[20.264,43.351,60],[20.358,43.351,56],[20.452,43.351,40],[20.545,43.351,42],[20.639,43.351,45],[20.733,43.351,44],[20.826,43.351,27],[20.92,43.351,45],[21.014,43.351,56],[21.107,43.351,79],[21.201,43.351,81],[21.295,43.351,71],[21.388,43.351,44],[21.482,43.351,30],[21.576,43.351,38],[21.669,43.351,51],[21.763,43.351,27],[21.856,43.351,3],[21.95,43.351,4],[22.044,43.351,43],[22.137,43.351,76],[22.231,43.351,83],[22.325,43.351,76],[22.418,43.351,57],[22.512,43.351,51],[22.606,43.351,56],[22.699,43.351,38],[19.421,43.419,73],[19.515,43.419,68],[19.609,43.419,71],[19.702,43.419,76],[19.796,43.419,65],[19.89,43.419,55],[19.983,43.419,42],[20.077,43.419,54],[20.171,43.419,55],[20.264,43.419,48],[20.358,43.419,29],[20.452,43.419,17],[20.545,43.419,19],[20.639,43.419,33],[20.733,43.419,61],[20.826,43.419,65],[20.92,43.419,73],[21.014,43.419,78],[21.107,43.419,91],[21.201,43.419,94],[21.295,43.419,88],[21.388,43.419,63],[21.482,43.419,43],[21.576,43.419,52],[21.669,43.419,64],[21.763,43.419,52],[21.856,43.419,31],[21.95,43.419,38],[22.044,43.419,64],[22.137,43.419,83],[22.231,43.419,85],[22.325,43.419,76],[22.418,43.419,58],[22.512,43.419,52],[22.606,43.419,51],[19.328,43.486,56],[19.421,43.486,71],[19.515,43.486,73],[19.609,43.486,67],[19.702,43.486,61],[19.796,43.486,48],[19.89,43.486,41],[19.983,43.486,34],[20.077,43.486,47],[20.171,43.486,51],[20.264,43.486,46],[20.358,43.486,19],[20.452,43.486,13],[20.545,43.486,16],[20.639,43.486,37],[20.733,43.486,72],[20.826,43.486,85],[20.92,43.486,89],[21.014,43.486,90],[21.107,43.486,96],[21.201,43.486,99],[21.295,43.486,96],[21.388,43.486,76],[21.482,43.486,58],[21.576,43.486,63],[21.669,43.486,77],[21.763,43.486,75],[21.856,43.486,69],[21.95,43.486,71],[22.044,43.486,81],[22.137,43.486,87],[22.231,43.486,80],[22.325,43.486,67],[22.418,43.486,53],[22.512,43.486,49],[22.606,43.486,50],[22.699,43.486,42],[19.234,43.554,17],[19.328,43.554,39],[19.421,43.554,81],[19.515,43.554,90],[19.609,43.554,79],[19.702,43.554,59],[19.796,43.554,44],[19.89,43.554,44],[19.983,43.554,45],[20.077,43.554,61],[20.171,43.554,56],[20.264,43.554,46],[20.358,43.554,35],[20.452,43.554,22],[20.545,43.554,32],[20.639,43.554,60],[20.733,43.554,80],[20.826,43.554,90],[20.92,43.554,92],[21.014,43.554,92],[21.107,43.554,98],[21.201,43.554,99],[21.295,43.554,98],[21.388,43.554,84],[21.482,43.554,81],[21.576,43.554,70],[21.669,43.554,85],[21.763,43.554,89],[21.856,43.554,89],[21.95,43.554,75],[22.044,43.554,81],[22.137,43.554,84],[22.231,43.554,64],[22.325,43.554,37],[22.418,43.554,28],[22.512,43.554,33],[22.606,43.554,50],[22.699,43.554,49],[19.234,43.621,28],[19.328,43.621,53],[19.421,43.621,72],[19.515,43.621,76],[19.609,43.621,65],[19.702,43.621,39],[19.796,43.621,38],[19.89,43.621,46],[19.983,43.621,38],[20.077,43.621,50],[20.171,43.621,42],[20.264,43.621,30],[20.358,43.621,26],[20.452,43.621,29],[20.545,43.621,19],[20.639,43.621,26],[20.733,43.621,65],[20.826,43.621,75],[20.92,43.621,85],[21.014,43.621,90],[21.107,43.621,97],[21.201,43.621,96],[21.295,43.621,92],[21.388,43.621,83],[21.482,43.621,80],[21.576,43.621,74],[21.669,43.621,88],[21.763,43.621,94],[21.856,43.621,95],[21.95,43.621,88],[22.044,43.621,91],[22.137,43.621,91],[22.231,43.621,79],[22.325,43.621,53],[22.418,43.621,25],[22.512,43.621,19],[22.606,43.621,53],[22.699,43.621,66],[22.793,43.621,82],[19.328,43.689,75],[19.421,43.689,69],[19.515,43.689,61],[19.609,43.689,29],[19.702,43.689,3],[19.796,43.689,16],[19.89,43.689,36],[19.983,43.689,28],[20.077,43.689,33],[20.171,43.689,43],[20.264,43.689,38],[20.358,43.689,20],[20.452,43.689,24],[20.545,43.689,14],[20.639,43.689,6],[20.733,43.689,16],[20.826,43.689,53],[20.92,43.689,76],[21.014,43.689,84],[21.107,43.689,89],[21.201,43.689,77],[21.295,43.689,76],[21.388,43.689,84],[21.482,43.689,90],[21.576,43.689,88],[21.669,43.689,90],[21.763,43.689,94],[21.856,43.689,98],[21.95,43.689,97],[22.044,43.689,96],[22.137,43.689,88],[22.231,43.689,68],[22.325,43.689,44],[22.418,43.689,15],[22.512,43.689,11],[22.606,43.689,46],[22.699,43.689,79],[22.793,43.689,87],[22.887,43.689,88],[19.328,43.756,84],[19.421,43.756,73],[19.515,43.756,60],[19.609,43.756,21],[19.702,43.756,2],[19.796,43.756,13],[19.89,43.756,27],[19.983,43.756,24],[20.077,43.756,24],[20.171,43.756,43],[20.264,43.756,42],[20.358,43.756,13],[20.452,43.756,18],[20.545,43.756,17],[20.639,43.756,8],[20.733,43.756,13],[20.826,43.756,51],[20.92,43.756,74],[21.014,43.756,81],[21.107,43.756,83],[21.201,43.756,64],[21.295,43.756,69],[21.388,43.756,85],[21.482,43.756,93],[21.576,43.756,94],[21.669,43.756,93],[21.763,43.756,95],[21.856,43.756,99],[21.95,43.756,99],[22.044,43.756,95],[22.137,43.756,79],[22.231,43.756,56],[22.325,43.756,36],[22.418,43.756,13],[22.512,43.756,11],[22.606,43.756,44],[22.699,43.756,83],[22.793,43.756,89],[22.887,43.756,90],[19.328,43.824,73],[19.421,43.824,73],[19.515,43.824,67],[19.609,43.824,54],[19.702,43.824,42],[19.796,43.824,13],[19.89,43.824,6],[19.983,43.824,18],[20.077,43.824,15],[20.171,43.824,24],[20.264,43.824,17],[20.358,43.824,3],[20.452,43.824,5],[20.545,43.824,21],[20.639,43.824,44],[20.733,43.824,63],[20.826,43.824,78],[20.92,43.824,84],[21.014,43.824,87],[21.107,43.824,84],[21.201,43.824,69],[21.295,43.824,77],[21.388,43.824,89],[21.482,43.824,91],[21.576,43.824,94],[21.669,43.824,95],[21.763,43.824,96],[21.856,43.824,97],[21.95,43.824,98],[22.044,43.824,90],[22.137,43.824,73],[22.231,43.824,68],[22.325,43.824,36],[22.418,43.824,20],[22.512,43.824,24],[22.606,43.824,63],[22.699,43.824,71],[19.421,43.891,82],[19.515,43.891,80],[19.609,43.891,86],[19.702,43.891,56],[19.796,43.891,14],[19.89,43.891,6],[19.983,43.891,16],[20.077,43.891,12],[20.171,43.891,9],[20.264,43.891,3],[20.358,43.891,0],[20.452,43.891,8],[20.545,43.891,32],[20.639,43.891,62],[20.733,43.891,67],[20.826,43.891,72],[20.92,43.891,67],[21.014,43.891,74],[21.107,43.891,71],[21.201,43.891,76],[21.295,43.891,84],[21.388,43.891,92],[21.482,43.891,94],[21.576,43.891,95],[21.669,43.891,96],[21.763,43.891,95],[21.856,43.891,89],[21.95,43.891,85],[22.044,43.891,77],[22.137,43.891,66],[22.231,43.891,59],[22.325,43.891,41],[22.418,43.891,41],[22.512,43.891,46],[22.606,43.891,47],[19.421,43.959,78],[19.515,43.959,76],[19.609,43.959,82],[19.702,43.959,58],[19.796,43.959,41],[19.89,43.959,27],[19.983,43.959,17],[20.077,43.959,22],[20.171,43.959,15],[20.264,43.959,6],[20.358,43.959,5],[20.452,43.959,18],[20.545,43.959,32],[20.639,43.959,53],[20.733,43.959,60],[20.826,43.959,36],[20.92,43.959,15],[21.014,43.959,42],[21.107,43.959,65],[21.201,43.959,70],[21.295,43.959,80],[21.388,43.959,90],[21.482,43.959,93],[21.576,43.959,94],[21.669,43.959,95],[21.763,43.959,95],[21.856,43.959,92],[21.95,43.959,80],[22.044,43.959,78],[22.137,43.959,73],[22.231,43.959,59],[22.325,43.959,51],[22.418,43.959,42],[22.512,43.959,39],[22.606,43.959,38],[19.421,44.026,49],[19.515,44.026,47],[19.609,44.026,55],[19.702,44.026,40],[19.796,44.026,37],[19.89,44.026,33],[19.983,44.026,20],[20.077,44.026,39],[20.171,44.026,44],[20.264,44.026,33],[20.358,44.026,23],[20.452,44.026,32],[20.545,44.026,31],[20.639,44.026,30],[20.733,44.026,42],[20.826,44.026,11],[20.92,44.026,1],[21.014,44.026,20],[21.107,44.026,57],[21.201,44.026,55],[21.295,44.026,64],[21.388,44.026,82],[21.482,44.026,88],[21.576,44.026,88],[21.669,44.026,84],[21.763,44.026,86],[21.856,44.026,93],[21.95,44.026,85],[22.044,44.026,86],[22.137,44.026,81],[22.231,44.026,57],[22.325,44.026,51],[22.418,44.026,28],[22.512,44.026,18],[19.421,44.094,16],[19.515,44.094,24],[19.609,44.094,41],[19.702,44.094,21],[19.796,44.094,27],[19.89,44.094,36],[19.983,44.094,41],[20.077,44.094,32],[20.171,44.094,58],[20.264,44.094,62],[20.358,44.094,38],[20.452,44.094,24],[20.545,44.094,31],[20.639,44.094,31],[20.733,44.094,24],[20.826,44.094,26],[20.92,44.094,16],[21.014,44.094,29],[21.107,44.094,49],[21.201,44.094,31],[21.295,44.094,32],[21.388,44.094,52],[21.482,44.094,63],[21.576,44.094,78],[21.669,44.094,64],[21.763,44.094,66],[21.856,44.094,88],[21.95,44.094,95],[22.044,44.094,92],[22.137,44.094,79],[22.231,44.094,50],[22.325,44.094,35],[22.418,44.094,11],[22.512,44.094,6],[19.328,44.161,8],[19.421,44.161,11],[19.515,44.161,20],[19.609,44.161,22],[19.702,44.161,31],[19.796,44.161,25],[19.89,44.161,18],[19.983,44.161,24],[20.077,44.161,43],[20.171,44.161,57],[20.264,44.161,50],[20.358,44.161,28],[20.452,44.161,16],[20.545,44.161,22],[20.639,44.161,26],[20.733,44.161,22],[20.826,44.161,27],[20.92,44.161,33],[21.014,44.161,37],[21.107,44.161,36],[21.201,44.161,23],[21.295,44.161,22],[21.388,44.161,41],[21.482,44.161,65],[21.576,44.161,60],[21.669,44.161,60],[21.763,44.161,72],[21.856,44.161,87],[21.95,44.161,98],[22.044,44.161,97],[22.137,44.161,87],[22.231,44.161,62],[22.325,44.161,47],[22.418,44.161,14],[19.234,44.229,8],[19.328,44.229,4],[19.421,44.229,19],[19.515,44.229,33],[19.609,44.229,19],[19.702,44.229,20],[19.796,44.229,17],[19.89,44.229,6],[19.983,44.229,13],[20.077,44.229,37],[20.171,44.229,53],[20.264,44.229,46],[20.358,44.229,27],[20.452,44.229,16],[20.545,44.229,16],[20.639,44.229,19],[20.733,44.229,25],[20.826,44.229,32],[20.92,44.229,37],[21.014,44.229,40],[21.107,44.229,31],[21.201,44.229,9],[21.295,44.229,10],[21.388,44.229,27],[21.482,44.229,50],[21.576,44.229,58],[21.669,44.229,72],[21.763,44.229,86],[21.856,44.229,98],[21.95,44.229,100],[22.044,44.229,99],[22.137,44.229,92],[22.231,44.229,68],[22.325,44.229,51],[22.418,44.229,25],[19.14,44.296,19],[19.234,44.296,10],[19.328,44.296,5],[19.421,44.296,22],[19.515,44.296,35],[19.609,44.296,16],[19.702,44.296,17],[19.796,44.296,17],[19.89,44.296,4],[19.983,44.296,12],[20.077,44.296,35],[20.171,44.296,49],[20.264,44.296,45],[20.358,44.296,30],[20.452,44.296,22],[20.545,44.296,15],[20.639,44.296,14],[20.733,44.296,23],[20.826,44.296,33],[20.92,44.296,40],[21.014,44.296,44],[21.107,44.296,32],[21.201,44.296,7],[21.295,44.296,9],[21.388,44.296,25],[21.482,44.296,37],[21.576,44.296,60],[21.669,44.296,76],[21.763,44.296,89],[21.856,44.296,100],[21.95,44.296,100],[22.044,44.296,99],[22.137,44.296,93],[22.231,44.296,65],[22.325,44.296,48],[22.418,44.296,28],[22.512,44.296,21],[19.14,44.364,25],[19.234,44.364,17],[19.328,44.364,20],[19.421,44.364,26],[19.515,44.364,30],[19.609,44.364,24],[19.702,44.364,51],[19.796,44.364,44],[19.89,44.364,33],[19.983,44.364,46],[20.077,44.364,50],[20.171,44.364,50],[20.264,44.364,41],[20.358,44.364,33],[20.452,44.364,25],[20.545,44.364,18],[20.639,44.364,12],[20.733,44.364,17],[20.826,44.364,22],[20.92,44.364,31],[21.014,44.364,35],[21.107,44.364,24],[21.201,44.364,29],[21.295,44.364,30],[21.388,44.364,23],[21.482,44.364,6],[21.576,44.364,40],[21.669,44.364,62],[21.763,44.364,80],[21.856,44.364,99],[21.95,44.364,100],[22.044,44.364,100],[22.137,44.364,96],[22.231,44.364,58],[22.325,44.364,56],[22.418,44.364,19],[22.512,44.364,7],[19.234,44.431,65],[19.328,44.431,56],[19.421,44.431,42],[19.515,44.431,42],[19.609,44.431,48],[19.702,44.431,54],[19.796,44.431,59],[19.89,44.431,63],[19.983,44.431,65],[20.077,44.431,50],[20.171,44.431,41],[20.264,44.431,34],[20.358,44.431,41],[20.452,44.431,24],[20.545,44.431,18],[20.639,44.431,9],[20.733,44.431,8],[20.826,44.431,10],[20.92,44.431,13],[21.014,44.431,15],[21.107,44.431,26],[21.201,44.431,39],[21.295,44.431,34],[21.388,44.431,18],[21.482,44.431,18],[21.576,44.431,29],[21.669,44.431,62],[21.763,44.431,85],[21.856,44.431,99],[21.95,44.431,100],[22.044,44.431,99],[22.137,44.431,89],[22.231,44.431,70],[22.325,44.431,47],[22.418,44.431,27],[22.512,44.431,27],[22.606,44.431,45],[19.234,44.499,81],[19.328,44.499,85],[19.421,44.499,80],[19.515,44.499,78],[19.609,44.499,76],[19.702,44.499,70],[19.796,44.499,72],[19.89,44.499,72],[19.983,44.499,67],[20.077,44.499,50],[20.171,44.499,33],[20.264,44.499,18],[20.358,44.499,15],[20.452,44.499,15],[20.545,44.499,12],[20.639,44.499,6],[20.733,44.499,4],[20.826,44.499,5],[20.92,44.499,7],[21.014,44.499,8],[21.107,44.499,15],[21.201,44.499,30],[21.295,44.499,29],[21.388,44.499,16],[21.482,44.499,17],[21.576,44.499,30],[21.669,44.499,60],[21.763,44.499,81],[21.856,44.499,97],[21.95,44.499,99],[22.044,44.499,99],[22.137,44.499,92],[22.231,44.499,85],[22.325,44.499,75],[22.418,44.499,61],[22.512,44.499,60],[22.606,44.499,73],[19.234,44.566,83],[19.328,44.566,95],[19.421,44.566,97],[19.515,44.566,97],[19.609,44.566,90],[19.702,44.566,82],[19.796,44.566,78],[19.89,44.566,67],[19.983,44.566,56],[20.077,44.566,39],[20.171,44.566,19],[20.264,44.566,6],[20.358,44.566,3],[20.452,44.566,4],[20.545,44.566,4],[20.639,44.566,3],[20.733,44.566,2],[20.826,44.566,3],[20.92,44.566,4],[21.014,44.566,4],[21.107,44.566,6],[21.201,44.566,11],[21.295,44.566,16],[21.388,44.566,16],[21.482,44.566,13],[21.576,44.566,35],[21.669,44.566,59],[21.763,44.566,77],[21.856,44.566,92],[21.95,44.566,91],[22.044,44.566,94],[22.137,44.566,97],[22.231,44.566,98],[22.325,44.566,97],[22.418,44.566,94],[22.512,44.566,92],[22.606,44.566,95],[19.328,44.634,93],[19.421,44.634,98],[19.515,44.634,98],[19.609,44.634,87],[19.702,44.634,84],[19.796,44.634,77],[19.89,44.634,49],[19.983,44.634,39],[20.077,44.634,32],[20.171,44.634,16],[20.264,44.634,4],[20.358,44.634,2],[20.452,44.634,1],[20.545,44.634,1],[20.639,44.634,1],[20.733,44.634,1],[20.826,44.634,2],[20.92,44.634,1],[21.014,44.634,1],[21.107,44.634,3],[21.201,44.634,4],[21.295,44.634,12],[21.388,44.634,27],[21.482,44.634,14],[21.576,44.634,46],[21.669,44.634,65],[21.763,44.634,79],[21.856,44.634,95],[21.95,44.634,91],[22.044,44.634,92],[22.137,44.634,99],[22.231,44.634,100],[19.328,44.701,94],[19.421,44.701,97],[19.515,44.701,91],[19.609,44.701,62],[19.702,44.701,40],[19.796,44.701,61],[19.89,44.701,47],[19.983,44.701,45],[20.077,44.701,16],[20.171,44.701,5],[20.264,44.701,2],[20.358,44.701,0],[20.452,44.701,0],[20.545,44.701,0],[20.639,44.701,1],[20.733,44.701,2],[20.826,44.701,3],[20.92,44.701,2],[21.014,44.701,4],[21.107,44.701,6],[21.201,44.701,11],[21.295,44.701,24],[21.388,44.701,34],[21.482,44.701,28],[21.576,44.701,48],[21.669,44.701,73],[19.328,44.769,82],[19.421,44.769,86],[19.515,44.769,79],[19.609,44.769,42],[19.702,44.769,4],[19.796,44.769,44],[19.89,44.769,46],[19.983,44.769,46],[20.077,44.769,18],[20.171,44.769,5],[20.264,44.769,1],[20.358,44.769,0],[20.452,44.769,0],[20.545,44.769,0],[20.639,44.769,1],[20.733,44.769,3],[20.826,44.769,7],[20.92,44.769,25],[21.014,44.769,37],[21.107,44.769,36],[21.201,44.769,48],[21.295,44.769,50],[21.388,44.769,50],[21.482,44.769,56],[21.576,44.769,65],[19.421,44.836,74],[19.515,44.836,71],[19.609,44.836,62],[19.702,44.836,41],[19.796,44.836,48],[19.89,44.836,41],[19.983,44.836,40],[20.077,44.836,20],[20.171,44.836,7],[20.264,44.836,2],[20.358,44.836,0],[20.452,44.836,0],[20.545,44.836,1],[20.639,44.836,2],[20.733,44.836,7],[20.826,44.836,20],[20.92,44.836,51],[21.014,44.836,68],[21.107,44.836,65],[21.201,44.836,71],[21.295,44.836,65],[21.388,44.836,59],[21.482,44.836,69],[19.421,44.904,71],[19.515,44.904,63],[19.609,44.904,44],[19.702,44.904,37],[19.796,44.904,37],[19.89,44.904,32],[19.983,44.904,21],[20.077,44.904,16],[20.171,44.904,11],[20.264,44.904,5],[20.358,44.904,2],[20.452,44.904,1],[20.545,44.904,2],[20.639,44.904,5],[20.733,44.904,17],[20.826,44.904,35],[20.92,44.904,68],[21.014,44.904,83],[21.107,44.904,78],[21.201,44.904,73],[21.295,44.904,75],[21.388,44.904,73],[19.328,44.971,53],[19.421,44.971,50],[19.515,44.971,34],[19.609,44.971,2],[19.702,44.971,26],[19.796,44.971,35],[19.89,44.971,27],[19.983,44.971,18],[20.077,44.971,35],[20.171,44.971,34],[20.264,44.971,20],[20.358,44.971,8],[20.452,44.971,4],[20.545,44.971,5],[20.639,44.971,11],[20.733,44.971,33],[20.826,44.971,59],[20.92,44.971,78],[21.014,44.971,88],[21.107,44.971,91],[21.201,44.971,86],[21.295,44.971,75],[21.388,44.971,59],[19.234,45.039,65],[19.328,45.039,54],[19.421,45.039,53],[19.515,45.039,48],[19.609,45.039,23],[19.702,45.039,36],[19.796,45.039,28],[19.89,45.039,25],[19.983,45.039,24],[20.077,45.039,46],[20.171,45.039,51],[20.264,45.039,41],[20.358,45.039,22],[20.452,45.039,17],[20.545,45.039,20],[20.639,45.039,31],[20.733,45.039,46],[20.826,45.039,66],[20.92,45.039,83],[21.014,45.039,90],[21.107,45.039,90],[21.201,45.039,83],[21.295,45.039,70],[21.388,45.039,55],[19.14,45.106,29],[19.234,45.106,45],[19.328,45.106,52],[19.421,45.106,62],[19.515,45.106,60],[19.609,45.106,50],[19.702,45.106,33],[19.796,45.106,23],[19.89,45.106,24],[19.983,45.106,32],[20.077,45.106,54],[20.171,45.106,53],[20.264,45.106,45],[20.358,45.106,27],[20.452,45.106,29],[20.545,45.106,37],[20.639,45.106,52],[20.733,45.106,56],[20.826,45.106,64],[20.92,45.106,71],[21.014,45.106,76],[21.107,45.106,78],[21.201,45.106,74],[21.295,45.106,64],[21.388,45.106,61],[21.482,45.106,74],[19.047,45.174,7],[19.14,45.174,13],[19.234,45.174,29],[19.328,45.174,53],[19.421,45.174,61],[19.515,45.174,53],[19.609,45.174,42],[19.702,45.174,17],[19.796,45.174,5],[19.89,45.174,7],[19.983,45.174,28],[20.077,45.174,49],[20.171,45.174,41],[20.264,45.174,22],[20.358,45.174,19],[20.452,45.174,15],[20.545,45.174,22],[20.639,45.174,45],[20.733,45.174,61],[20.826,45.174,66],[20.92,45.174,55],[21.014,45.174,49],[21.107,45.174,61],[21.201,45.174,64],[21.295,45.174,61],[21.388,45.174,66],[21.482,45.174,67],[19.047,45.241,3],[19.14,45.241,3],[19.234,45.241,24],[19.328,45.241,48],[19.421,45.241,69],[19.515,45.241,61],[19.609,45.241,37],[19.702,45.241,6],[19.796,45.241,1],[19.89,45.241,1],[19.983,45.241,6],[20.077,45.241,29],[20.171,45.241,42],[20.264,45.241,40],[20.358,45.241,25],[20.452,45.241,22],[20.545,45.241,26],[20.639,45.241,37],[20.733,45.241,43],[20.826,45.241,37],[20.92,45.241,40],[21.014,45.241,45],[21.107,45.241,24],[21.201,45.241,23],[21.295,45.241,20],[21.388,45.241,31],[19.14,45.309,2],[19.234,45.309,10],[19.328,45.309,43],[19.421,45.309,78],[19.515,45.309,71],[19.609,45.309,42],[19.702,45.309,8],[19.796,45.309,1],[19.89,45.309,1],[19.983,45.309,6],[20.077,45.309,27],[20.171,45.309,45],[20.264,45.309,35],[20.358,45.309,14],[20.452,45.309,15],[20.545,45.309,24],[20.639,45.309,27],[20.733,45.309,32],[20.826,45.309,37],[20.92,45.309,39],[21.014,45.309,37],[21.107,45.309,10],[21.201,45.309,6],[21.295,45.309,5],[21.388,45.309,9],[19.14,45.376,2],[19.234,45.376,7],[19.328,45.376,40],[19.421,45.376,80],[19.515,45.376,77],[19.609,45.376,55],[19.702,45.376,27],[19.796,45.376,10],[19.89,45.376,8],[19.983,45.376,17],[20.077,45.376,37],[20.171,45.376,50],[20.264,45.376,24],[20.358,45.376,3],[20.452,45.376,5],[20.545,45.376,20],[20.639,45.376,24],[20.733,45.376,30],[20.826,45.376,46],[20.92,45.376,41],[21.014,45.376,32],[21.107,45.376,12],[21.201,45.376,6],[21.295,45.376,4],[19.14,45.444,7],[19.234,45.444,37],[19.328,45.444,53],[19.421,45.444,70],[19.515,45.444,69],[19.609,45.444,60],[19.702,45.444,58],[19.796,45.444,47],[19.89,45.444,37],[19.983,45.444,37],[20.077,45.444,48],[20.171,45.444,61],[20.264,45.444,45],[20.358,45.444,17],[20.452,45.444,28],[20.545,45.444,49],[20.639,45.444,52],[20.733,45.444,34],[20.826,45.444,48],[20.92,45.444,45],[21.014,45.444,42],[21.107,45.444,32],[21.201,45.444,13],[19.14,45.511,53],[19.234,45.511,63],[19.328,45.511,70],[19.421,45.511,65],[19.515,45.511,62],[19.609,45.511,69],[19.702,45.511,78],[19.796,45.511,65],[19.89,45.511,38],[19.983,45.511,26],[20.077,45.511,48],[20.171,45.511,70],[20.264,45.511,71],[20.358,45.511,61],[20.452,45.511,53],[20.545,45.511,59],[20.639,45.511,62],[20.733,45.511,55],[20.826,45.511,56],[20.92,45.511,39],[21.014,45.511,31],[21.107,45.511,33],[19.14,45.579,56],[19.234,45.579,70],[19.328,45.579,72],[19.421,45.579,64],[19.515,45.579,62],[19.609,45.579,76],[19.702,45.579,71],[19.796,45.579,59],[19.89,45.579,32],[19.983,45.579,10],[20.077,45.579,28],[20.171,45.579,62],[20.264,45.579,79],[20.358,45.579,77],[20.452,45.579,84],[20.545,45.579,85],[20.639,45.579,80],[20.733,45.579,69],[20.826,45.579,59],[20.92,45.579,42],[21.014,45.579,35],[19.047,45.646,27],[19.14,45.646,35],[19.234,45.646,54],[19.328,45.646,64],[19.421,45.646,61],[19.515,45.646,58],[19.609,45.646,70],[19.702,45.646,41],[19.796,45.646,32],[19.89,45.646,28],[19.983,45.646,10],[20.077,45.646,19],[20.171,45.646,40],[20.264,45.646,66],[20.358,45.646,80],[20.452,45.646,96],[20.545,45.646,94],[20.639,45.646,83],[20.733,45.646,69],[20.826,45.646,55],[20.92,45.646,44],[19.047,45.714,20],[19.14,45.714,8],[19.234,45.714,18],[19.328,45.714,60],[19.421,45.714,66],[19.515,45.714,60],[19.609,45.714,55],[19.702,45.714,41],[19.796,45.714,16],[19.89,45.714,11],[19.983,45.714,16],[20.077,45.714,33],[20.171,45.714,28],[20.264,45.714,51],[20.358,45.714,94],[20.452,45.714,97],[20.545,45.714,91],[20.639,45.714,73],[20.733,45.714,69],[20.826,45.714,58],[18.953,45.781,42],[19.047,45.781,12],[19.14,45.781,3],[19.234,45.781,15],[19.328,45.781,38],[19.421,45.781,48],[19.515,45.781,51],[19.609,45.781,41],[19.702,45.781,35],[19.796,45.781,21],[19.89,45.781,19],[19.983,45.781,13],[20.077,45.781,36],[20.171,45.781,34],[20.264,45.781,52],[20.358,45.781,87],[20.452,45.781,94],[20.545,45.781,92],[20.639,45.781,82],[20.733,45.781,63],[18.953,45.849,55],[19.047,45.849,37],[19.14,45.849,26],[19.234,45.849,33],[19.328,45.849,51],[19.421,45.849,41],[19.515,45.849,36],[19.609,45.849,44],[19.702,45.849,40],[19.796,45.849,41],[19.89,45.849,42],[19.983,45.849,24],[20.077,45.849,42],[20.171,45.849,44],[20.264,45.849,57],[20.358,45.849,78],[20.452,45.849,86],[20.545,45.849,89],[20.639,45.849,88],[20.733,45.849,77],[18.953,45.916,68],[19.047,45.916,60],[19.14,45.916,52],[19.234,45.916,46],[19.328,45.916,62],[19.421,45.916,39],[19.515,45.916,26],[19.609,45.916,46],[19.702,45.916,46],[19.796,45.916,59],[19.89,45.916,70],[19.983,45.916,59],[20.077,45.916,60],[20.171,45.916,61],[20.264,45.916,69],[20.358,45.916,78],[20.452,45.916,85],[20.545,45.916,90],[20.639,45.916,91],[19.14,45.984,56],[19.234,45.984,33],[19.328,45.984,62],[19.421,45.984,50],[19.515,45.984,32],[19.609,45.984,37],[19.702,45.984,44],[19.796,45.984,58],[19.89,45.984,79],[19.983,45.984,94],[20.077,45.984,82],[20.171,45.984,81],[20.264,45.984,89],[20.358,45.984,96],[20.452,45.984,98],[20.545,45.984,98],[20.639,45.984,89],[19.328,46.051,56],[19.421,46.051,67],[19.515,46.051,54],[19.609,46.051,16],[19.702,46.051,7],[19.796,46.051,39],[19.89,46.051,83],[19.983,46.051,97],[20.077,46.051,93],[20.171,46.051,86],[20.264,46.051,88],[20.358,46.051,94],[20.452,46.051,100],[20.545,46.051,99],[20.639,46.051,77],[19.421,46.119,55],[19.515,46.119,42],[19.609,46.119,7],[19.702,46.119,4],[19.796,46.119,47],[19.89,46.119,87],[19.983,46.119,98],[20.077,46.119,98],[20.171,46.119,88],[20.264,46.119,84],[20.358,46.119,93],[20.452,46.119,99],[20.545,46.119,99]],"granica":[[20.15,46.18],[20.6,46.14],[20.78,45.75],[21.1,45.55],[21.52,45.2],[21.44,44.87],[21.72,44.68],[22.3,44.63],[22.7,44.55],[22.45,44.2],[22.68,43.85],[22.98,43.72],[22.62,43.42],[22.98,43.18],[22.55,42.88],[22.34,42.35],[21.9,42.32],[21.58,42.25],[21.3,42.14],[20.75,41.86],[20.52,42.22],[20.35,42.85],[19.98,43.1],[19.65,43.22],[19.2,43.55],[19.42,44.06],[19.1,44.32],[19.38,44.88],[19,45.14],[19.12,45.52],[18.85,45.9],[19.06,45.96],[19.42,46.14]]};
+  var NS = "http://www.w3.org/2000/svg";
+  var PALETA = ["#0198bd", "#49e3ce", "#d8feb5", "#feedb1", "#fead54", "#d1374e"];
+
+  function el(ime, atr, roditelj) {
+    var e = document.createElementNS(NS, ime);
+    for (var k in atr) if (atr[k] !== null && atr[k] !== undefined) e.setAttribute(k, atr[k]);
+    if (roditelj) roditelj.appendChild(e);
+    return e;
+  }
+  function tekst(roditelj, x, y, s, klasa, sidro) {
+    var t = el("text", { x: x, y: y, class: klasa || "d-tekst", "text-anchor": sidro || "start" }, roditelj);
+    t.textContent = s;
+    return t;
+  }
+  function platno(gde, s, v) {
+    var host = document.getElementById(gde);
+    if (!host) return null;
+    var svg = el("svg", { viewBox: "0 0 " + s + " " + v, width: s, height: v,
+                          role: "img", "aria-label": host.getAttribute("data-opis") || "" }, host);
+    svg.style.maxWidth = "100%";
+    return svg;
+  }
+  /* шестоугао са теменом на врху; полупречник = средиште → теме */
+  function hex(cx, cy, r) {
+    var t = [];
+    for (var i = 0; i < 6; i++) {
+      var a = Math.PI / 180 * (90 + 60 * i);
+      t.push((cx + r * Math.cos(a)).toFixed(1) + "," + (cy - r * Math.sin(a)).toFixed(1));
+    }
+    return t.join(" ");
+  }
+
+  /* ---------------- ток ---------------- */
+  function crtajTok() {
+    var svg = platno("crtez-tok", 880, 250);
+    if (!svg) return;
+    var koraci = [
+      { n: "40.568 тачака", o: "мрежа 1,5 km", k: ["Насељени део"] },
+      { n: "шестоуглови", o: "просек по ћелији", k: ["Пречник"] },
+      { n: "избор ћелија", o: "праг по цени", k: ["Горњи перцентил"] },
+      { n: "цртање", o: "стуб на карти", k: ["Попуњеност", "Висина"] }
+    ];
+    var x = 8, sirina = 196, razmak = 28, y = 34, visina = 74;
+    koraci.forEach(function (kk, i) {
+      var g = el("g", {}, svg);
+      el("rect", { x: x, y: y, width: sirina, height: visina, rx: 2,
+                   fill: "var(--surface-2)", stroke: "var(--line-2)" }, g);
+      tekst(g, x + 14, y + 20, "КОРАК " + (i + 1), "d-tekst").setAttribute("fill", "var(--ink-3)");
+      tekst(g, x + 14, y + 43, kk.n, "d-tekst-jak");
+      tekst(g, x + 14, y + 62, kk.o, "d-tekst");
+
+      /* клизачи испод корака; веза иде од претходног дна, да не сече плочице */
+      var yy = y + visina + 26;
+      var odozgo = y + visina;
+      kk.k.forEach(function (ime) {
+        el("line", { x1: x + 4, y1: odozgo, x2: x + 4, y2: yy - 13,
+                     class: "d-akcenat", "stroke-dasharray": "2 3" }, g);
+        el("line", { x1: x + 4, y1: yy - 2, x2: x + 10, y2: yy - 2,
+                     class: "d-akcenat", "stroke-dasharray": "2 3" }, g);
+        var s = 9.2 * ime.length + 20;
+        el("rect", { x: x + 10, y: yy - 13, width: s, height: 22, rx: 2,
+                     fill: "var(--accent-soft)", stroke: "var(--accent)" }, g);
+        tekst(g, x + 20, yy + 2, ime, "d-tekst").setAttribute("fill", "var(--accent)");
+        odozgo = yy - 2;
+        yy += 30;
+      });
+
+      if (i < koraci.length - 1) {
+        var sx = x + sirina + 6, sy = y + visina / 2;
+        el("path", { d: "M" + sx + " " + sy + " h " + (razmak - 14),
+                     class: "d-linija", "stroke-width": 1.4 }, svg);
+        el("path", { d: "M" + (sx + razmak - 14) + " " + (sy - 4) + " l 5 4 l -5 4 z",
+                     fill: "var(--line-2)" }, svg);
+      }
+      x += sirina + razmak;
+    });
+    tekst(svg, 8, 18, "РЕДОСЛЕД ДЕЛОВАЊА", "d-tekst").setAttribute("fill", "var(--ink-3)");
+  }
+
+  /* ---------------- насељени део ---------------- */
+  function crtajNaseljeno() {
+    var svg = platno("crtez-naseljeno", 880, 300);
+    if (!svg || !PODACI) return;
+    var pragovi = [100, 30, 10];
+    var sirina = 274, razmak = 30, x0 = 8;
+
+    /* пројекција по стварном обиму границе */
+    var k = Math.cos(44 * Math.PI / 180);
+    var lo0 = 1e9, lo1 = -1e9, la0 = 1e9, la1 = -1e9;
+    PODACI.granica.forEach(function (t) {
+      if (t[0] < lo0) lo0 = t[0];
+      if (t[0] > lo1) lo1 = t[0];
+      if (t[1] < la0) la0 = t[1];
+      if (t[1] > la1) la1 = t[1];
+    });
+    var visina = 226, gore = 50, ivica = 6;
+    var raz = Math.min((sirina - 2 * ivica) / ((lo1 - lo0) * k),
+                       (visina - 2 * ivica) / (la1 - la0));
+    var pomakX = ivica + (sirina - 2 * ivica - (lo1 - lo0) * k * raz) / 2;
+    function px(lon) { return pomakX + (lon - lo0) * k * raz; }
+    function py(lat) { return visina - ivica - (lat - la0) * raz; }
+
+    pragovi.forEach(function (p, i) {
+      var g = el("g", { transform: "translate(" + (x0 + i * (sirina + razmak)) + "," + gore + ")" }, svg);
+
+      PODACI.uzorak.forEach(function (t) {
+        if (t[2] > p) return;
+        el("circle", { cx: px(t[0]).toFixed(1), cy: py(t[1]).toFixed(1), r: 2,
+                       fill: p === 100 ? "var(--ink-3)" : "var(--accent)",
+                       "fill-opacity": p === 100 ? .5 : .85 }, g);
+      });
+
+      var d = PODACI.granica.map(function (t, j) {
+        return (j ? "L" : "M") + px(t[0]).toFixed(1) + " " + py(t[1]).toFixed(1);
+      }).join(" ") + " Z";
+      el("path", { d: d, class: "d-linija", "stroke-width": 1.2 }, g);
+
+      tekst(g, 0, -28, p + " %", "d-tekst-jak");
+      var ukupno = Math.round(40568 * p / 100);
+      tekst(g, 0, -11, ukupno.toLocaleString("sr-RS") + " тачака", "d-tekst");
+    });
+  }
+
+  /* ---------------- пречник ---------------- */
+  function crtajPrecnik() {
+    var svg = platno("crtez-precnik", 880, 300);
+    if (!svg) return;
+    /* размерник: 1 km = 8 px, тачке на 1,5 km = 12 px */
+    var KM = 8, korak = 1.5 * KM;
+    var panele = [{ r: 2, ime: "Пречник 2.000 m", pod: "≈ 4,5 тачке по ћелији" },
+                  { r: 5, ime: "Пречник 5.000 m", pod: "≈ 27 тачака по ћелији" }];
+    var sirina = 410, visina = 216, gore = 48;
+
+    panele.forEach(function (p, i) {
+      var x0 = 8 + i * (sirina + 42);
+      var g = el("g", { transform: "translate(" + x0 + "," + gore + ")" }, svg);
+      var idIsecak = "isecak" + i;
+      var cl = el("clipPath", { id: idIsecak }, g);
+      el("rect", { x: 0, y: 0, width: sirina, height: visina }, cl);
+      var unutra = el("g", { "clip-path": "url(#" + idIsecak + ")" }, g);
+
+      /* тачке мреже */
+      for (var y = korak / 2; y < visina; y += korak) {
+        for (var x = korak / 2; x < sirina; x += korak) {
+          el("circle", { cx: x.toFixed(1), cy: y.toFixed(1), r: 1.35, class: "d-tacka" }, unutra);
+        }
+      }
+      /* саће */
+      var r = p.r * KM, dx = r * Math.sqrt(3), dy = r * 1.5, red = 0;
+      for (var cy = -dy; cy < visina + dy; cy += dy) {
+        for (var cx = (red % 2 ? dx / 2 : 0) - dx; cx < sirina + dx; cx += dx) {
+          el("polygon", { points: hex(cx, cy, r), fill: "none",
+                          stroke: "var(--accent)", "stroke-opacity": .55, "stroke-width": 1 }, unutra);
+        }
+        red++;
+      }
+      el("rect", { x: 0, y: 0, width: sirina, height: visina, fill: "none", class: "d-linija" }, g);
+      tekst(g, 0, -26, p.ime, "d-tekst-jak");
+      tekst(g, 0, -10, p.pod, "d-tekst");
+    });
+
+    /* размерник */
+    var sg = el("g", { transform: "translate(8,286)" }, svg);
+    el("line", { x1: 0, y1: 0, x2: 10 * KM, y2: 0, class: "d-linija", "stroke-width": 1.4 }, sg);
+    el("line", { x1: 0, y1: -4, x2: 0, y2: 4, class: "d-linija" }, sg);
+    el("line", { x1: 10 * KM, y1: -4, x2: 10 * KM, y2: 4, class: "d-linija" }, sg);
+    tekst(sg, 10 * KM + 10, 4, "10 km", "d-tekst");
+  }
+
+  /* ---------------- перцентил ---------------- */
+  function crtajPercentil() {
+    var svg = platno("crtez-percentil", 880, 300);
+    if (!svg) return;
+    var h = [0, 0, 0, 1780, 2747, 1931, 1275, 917, 229, 44, 15, 1];
+    var min = 1000, max = 2700, K = h.length, najv = 2747;
+    var x0 = 58, y0 = 236, sirina = 700, visina = 176;
+    var sk = sirina / K;
+
+    /* оса и мреже */
+    el("line", { x1: x0, y1: y0, x2: x0 + sirina, y2: y0, class: "d-linija" }, svg);
+    [0, 1000, 2000, 2747].forEach(function (v) {
+      var y = y0 - v / najv * visina;
+      el("line", { x1: x0, y1: y.toFixed(1), x2: x0 + sirina, y2: y.toFixed(1),
+                   class: "d-tanka", "stroke-dasharray": v ? "2 4" : null }, svg);
+      tekst(svg, x0 - 8, y + 4, v.toLocaleString("sr-RS"), "d-tekst", "end");
+    });
+    tekst(svg, x0 - 8, 30, "ћелија", "d-tekst", "end");
+
+    h.forEach(function (v, i) {
+      if (!v) return;
+      var vy = v / najv * visina;
+      el("rect", { x: (x0 + i * sk + 2).toFixed(1), y: (y0 - vy).toFixed(1),
+                   width: (sk - 4).toFixed(1), height: vy.toFixed(1),
+                   fill: PALETA[Math.floor(i / 2)], "fill-opacity": .9 }, svg);
+    });
+
+    /* ознаке цене */
+    [0, 3, 6, 9, 12].forEach(function (i) {
+      var v = min + (max - min) * i / K;
+      tekst(svg, x0 + i * sk, y0 + 18, Math.round(v).toLocaleString("sr-RS"), "d-tekst", "middle");
+    });
+    tekst(svg, x0 + sirina, y0 + 36, "просечна цена по ћелији, €/m²", "d-tekst", "end");
+
+    /* праг на 95 */
+    var prag = 2103;
+    var xp = x0 + (prag - min) / (max - min) * sirina;
+    el("line", { x1: xp.toFixed(1), y1: 40, x2: xp.toFixed(1), y2: y0 + 6,
+                 class: "d-akcenat", "stroke-width": 1.6, "stroke-dasharray": "5 3" }, svg);
+    tekst(svg, xp + 8, 52, "перцентил 95 → праг 2.103 €", "d-tekst").setAttribute("fill", "var(--accent)");
+    tekst(svg, xp + 8, 68, "десно нестаје: 446 ћелија", "d-tekst").setAttribute("fill", "var(--accent)");
+    el("rect", { x: xp.toFixed(1), y: 40, width: (x0 + sirina - xp).toFixed(1), height: y0 - 40,
+                 fill: "var(--accent)", "fill-opacity": .07 }, svg);
+  }
+
+  /* ---------------- попуњеност ---------------- */
+  function crtajPokrivenost() {
+    var svg = platno("crtez-pokrivenost", 880, 230);
+    if (!svg) return;
+    var vred = [{ v: 1, p: "100 %" }, { v: 0.7, p: "49 %" }, { v: 0.4, p: "16 %" }];
+    var r = 62, y = 118;
+    vred.forEach(function (o, i) {
+      var cx = 150 + i * 290;
+      el("polygon", { points: hex(cx, y, r), fill: "none", class: "d-linija",
+                      "stroke-dasharray": "4 3" }, svg);
+      el("polygon", { points: hex(cx, y, r * o.v), fill: PALETA[2], stroke: PALETA[4],
+                      "stroke-width": 1.2 }, svg);
+      tekst(svg, cx, 32, "Попуњеност " + o.v.toFixed(2).replace(".", ","), "d-tekst-jak", "middle");
+      tekst(svg, cx, y + r + 34, "површина стуба " + o.p, "d-tekst", "middle");
+    });
+  }
+
+  /* ---------------- висина ---------------- */
+  function crtajVisina() {
+    var svg = platno("crtez-visina", 880, 290);
+    if (!svg) return;
+    var x0 = 68, y0 = 226, sirina = 700, visina = 176;
+    var i0 = 1.0, i1 = 2.2, hmax = 150;
+    function X(ind) { return x0 + (ind - i0) / (i1 - i0) * sirina; }
+    function Y(h) { return y0 - h / hmax * visina; }
+
+    /* стварно подручје ћелија */
+    el("rect", { x: X(1.382).toFixed(1), y: (y0 - visina).toFixed(1),
+                 width: (X(2.136) - X(1.382)).toFixed(1), height: visina,
+                 fill: "var(--accent)", "fill-opacity": .06 }, svg);
+    tekst(svg, X(1.382) + 6, y0 - visina + 16, "стварне ћелије: 1,382 – 2,136", "d-tekst")
+      .setAttribute("fill", "var(--accent)");
+
+    /* осе */
+    el("line", { x1: x0, y1: y0, x2: x0 + sirina, y2: y0, class: "d-linija" }, svg);
+    el("line", { x1: x0, y1: y0, x2: x0, y2: y0 - visina, class: "d-linija" }, svg);
+    [0, 50, 100, 150].forEach(function (h) {
+      el("line", { x1: x0, y1: Y(h).toFixed(1), x2: x0 + sirina, y2: Y(h).toFixed(1),
+                   class: "d-tanka", "stroke-dasharray": h ? "2 4" : null }, svg);
+      tekst(svg, x0 - 8, Y(h) + 4, h + " km", "d-tekst", "end");
+    });
+    [1.0, 1.3, 1.6, 1.9, 2.2].forEach(function (ind) {
+      tekst(svg, X(ind), y0 + 18, String(ind.toFixed(2)).replace(".", ","), "d-tekst", "middle");
+    });
+    tekst(svg, x0 + sirina, y0 + 36, "индекс кретања (01/2019 = 1)", "d-tekst", "end");
+    tekst(svg, x0 - 8, 26, "висина", "d-tekst", "end");
+
+    /* права за Висина = 50 */
+    el("line", { x1: X(i0).toFixed(1), y1: Y(0).toFixed(1),
+                 x2: X(i1).toFixed(1), y2: Y(150).toFixed(1),
+                 class: "d-akcenat", "stroke-width": 2 }, svg);
+    tekst(svg, X(1.72), Y(108), "Висина 50", "d-tekst").setAttribute("fill", "var(--accent)");
+
+    [{ i: 1.382, h: 47.8, s: "start", d: 9 }, { i: 2.136, h: 142.0, s: "end", d: -9 }]
+      .forEach(function (t) {
+        el("circle", { cx: X(t.i).toFixed(1), cy: Y(t.h).toFixed(1), r: 3.5, class: "d-akcenat-p" }, svg);
+        tekst(svg, X(t.i) + t.d, Y(t.h) - 9, String(t.h).replace(".", ",") + " km", "d-tekst", t.s);
+      });
+  }
+
+  function kopirajTekst() {
+    var dugme = document.getElementById("kopiraj");
+    var izvor = document.getElementById("tekst-mejl");
+    if (!dugme || !izvor) return;
+    dugme.addEventListener("click", function () {
+      var s = izvor.textContent;
+      var gotovo = function () {
+        dugme.textContent = "Копирано";
+        setTimeout(function () { dugme.textContent = "Копирај"; }, 1800);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(s).then(gotovo, function () { dugme.textContent = "Означи ручно"; });
+      } else {
+        var o = document.createRange();
+        o.selectNodeContents(izvor);
+        var sel = window.getSelection();
+        sel.removeAllRanges(); sel.addRange(o);
+        dugme.textContent = "Означено";
+      }
+    });
+  }
+
+  try { crtajTok(); } catch (e) {}
+  try { crtajNaseljeno(); } catch (e) {}
+  try { crtajPrecnik(); } catch (e) {}
+  try { crtajPercentil(); } catch (e) {}
+  try { crtajPokrivenost(); } catch (e) {}
+  try { crtajVisina(); } catch (e) {}
+  try { kopirajTekst(); } catch (e) {}
+})();
+</script>
+
+</body>
+</html>
