@@ -381,6 +381,15 @@ if (podaciFolder) {
 
   delovi.push(
     '--------------------------------------------------------------',
+    'Granica Srbije ugradjena u prikaz dolazi iz Natural Earth,',
+    '1:10m Admin 0 — Countries, slojevi SRB i KOS.',
+    'Natural Earth je u javnom vlasnistvu: koristi se slobodno, bez',
+    'navodjenja izvora. Ova napomena stoji radi sledljivosti podatka.',
+    'https://www.naturalearthdata.com/about/terms-of-use/',
+    '');
+
+  delovi.push(
+    '--------------------------------------------------------------',
     'Podloga karte nije ugradjena u fajl — stize sa CARTO servisa',
     '(basemaps.cartocdn.com, stil dark-matter). Nju ne pokriva nijedna',
     'licenca odavde: koristi se pod uslovima CARTO-a, koji traze da na',

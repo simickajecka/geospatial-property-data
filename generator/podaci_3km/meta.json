@@ -9,7 +9,7 @@
     "ugao": 30,
     "napomena": "teme nagore (deck.gl ColumnLayer, angle 30); svaka vrsta lezi na jednoj paraleli, razmak kolona se racuna za tu paralelu"
   },
-  "broj_tacaka": 10120,
+  "broj_tacaka": 9832,
   "broj_meseci": 96,
   "prvi_mesec": "2019-01",
   "poslednji_mesec": "2026-12",
@@ -112,18 +112,18 @@
     "2026-12"
   ],
   "okvir": {
-    "min_lon": 18.85,
-    "max_lon": 22.98,
-    "min_lat": 41.86,
-    "max_lat": 46.18
+    "min_lon": 18.845,
+    "max_lon": 22.9846,
+    "min_lat": 41.844,
+    "max_lat": 46.1739
   },
   "cene_bin": {
     "tip": "uint16 little-endian",
     "raspored": "mesec-major: [mesec0: sve tacke][mesec1: sve tacke]...",
-    "duzina_bajtova": 1943040,
+    "duzina_bajtova": 1887744,
     "opseg_vrednosti": [
       1000,
-      2630
+      2611
     ]
   },
   "indeks": {
@@ -133,5 +133,5 @@
       2.135
     ]
   },
-  "granica": "PRIBLIZNA kontura ugradjena u generator.js - zameniti zvanicnom granicom iz GeoSrbije"
+  "granica": "Natural Earth 1:10m Admin 0 (SRB + KOS), uproscena na ~220 m; za stvarnu upotrebu ide zvanicna granica iz GeoSrbije"
 }

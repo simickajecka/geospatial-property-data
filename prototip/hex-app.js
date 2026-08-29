@@ -477,13 +477,15 @@ function izracunajPrag() {
 
 /* ---------- слојеви ---------- */
 
-const putanjaGranice = [...G.GRANICA_PRIBLIZNA, G.GRANICA_PRIBLIZNA[0]];
+/* Граница долази као више прстенова (Србија и КиМ), па се сваки црта као
+   своја затворена путања — прво теме се додаје на крај да се прстен склопи. */
+const putanjeGranice = G.GRANICA.map(prsten => ({ path: [...prsten, prsten[0]] }));
 
 function slojevi() {
   return [
     new PathLayer({
       id: "granica",
-      data: [{ path: putanjaGranice }],
+      data: putanjeGranice,
       getPath: d => d.path,
       getColor: [86, 96, 102, 200],
       getWidth: 1,

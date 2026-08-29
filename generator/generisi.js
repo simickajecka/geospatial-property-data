@@ -121,7 +121,7 @@ tok.on('close', () => {
       objasnjenje: 'indeks = 1.0 u ' + serija.meseci[0],
       opseg_na_kraju: [Number(indeksMin.toFixed(3)), Number(indeksMax.toFixed(3))]
     },
-    granica: 'PRIBLIZNA kontura ugradjena u generator.js - zameniti zvanicnom granicom iz GeoSrbije'
+    granica: 'Natural Earth 1:10m Admin 0 (SRB + KOS), uproscena na ~220 m; za stvarnu upotrebu ide zvanicna granica iz GeoSrbije'
   };
   fs.writeFileSync(path.join(izlaz, 'meta.json'), JSON.stringify(meta, null, 2));
 
