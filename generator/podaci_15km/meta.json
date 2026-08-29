@@ -4,11 +4,12 @@
   "celija": {
     "oblik": "sestougao",
     "poluprecnik_m": 931,
-    "razmak_kolona_m": 1396,
-    "razmak_vrsta_m": 1612,
-    "napomena": "temena na istoku i zapadu (deck.gl ColumnLayer, angle 0)"
+    "razmak_vrsta_m": 1396,
+    "razmak_kolona_m": 1612,
+    "ugao": 30,
+    "napomena": "teme nagore (deck.gl ColumnLayer, angle 30); svaka vrsta lezi na jednoj paraleli, razmak kolona se racuna za tu paralelu"
   },
-  "broj_tacaka": 40559,
+  "broj_tacaka": 40500,
   "broj_meseci": 96,
   "prvi_mesec": "2019-01",
   "poslednji_mesec": "2026-12",
@@ -119,10 +120,10 @@
   "cene_bin": {
     "tip": "uint16 little-endian",
     "raspored": "mesec-major: [mesec0: sve tacke][mesec1: sve tacke]...",
-    "duzina_bajtova": 7787328,
+    "duzina_bajtova": 7776000,
     "opseg_vrednosti": [
       1000,
-      2634
+      2637
     ]
   },
   "indeks": {

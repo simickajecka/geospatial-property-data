@@ -162,19 +162,27 @@ function napraviSum(seed, oktave, osnovnaCelija) {
  * pa je R = korak / sqrt(3*sqrt(3)/2). Broj tacaka time ostaje uporediv sa
  * ranijim kvadratnim mrezama istog koraka.
  *
- * RASPORED. deck.gl-ov ColumnLayer pri `angle: 0` crta sestougao sa temenima
- * na istoku i zapadu i ravnim ivicama gore i dole. Takav se slaze ovako:
- *   razmak kolona   1.5 * R
- *   razmak vrsta    sqrt(3) * R
- *   svaka druga kolona pomerena za pola vrste
+ * RASPORED. Sestougao stoji temenom nagore (ColumnLayer, angle 30):
+ *   razmak vrsta    1.5 * R      po geografskoj sirini
+ *   razmak kolona   sqrt(3) * R  po duzini
+ *   svaka druga vrsta pomerena za pola kolone
  * Svih sest suseda je tada na rastojanju sqrt(3)*R.
  *
- * IZOBLICENJE. Resetka je pravilna u ovdasnjoj ekvidistantnoj projekciji,
- * a prikaz crta celije u metrima na tlu. Preko Srbije se to razilazi za oko
- * 3.5% po duzini (isto izoblicenje koje je vec opisano uz LAT0), pa se pri
- * punoj popunjenosti celije na severu neznatno preklapaju, a na jugu ostave
- * tanku fugu. Pravo resenje je zvanicni CRS (UTM 34N), isto kao i za sve
- * ostalo u ovom fajlu.
+ * ZASTO TEMENOM NAGORE, A NE NASTRANU. Jedan stepen duzine nije svuda isto
+ * dugacak: 80,1 km na 44. paraleli, 77,1 km na 46,2 a 82,9 km na 41,9.
+ * Ranija verzija je za ceo posao uzimala jednu vrednost, onu na 44. paraleli,
+ * pa su celije na severu ulazile jedna u drugu za 3,7%, a na jugu ostavljale
+ * fugu od 3,5%. To se vidi pri punoj popunjenosti.
+ *
+ * Sa temenom nagore svaka vrsta lezi na jednoj paraleli, pa se razmak kolona
+ * u stepenima moze racunati bas za tu paralelu. Rastojanje na tlu tada svuda
+ * ostaje sqrt(3)*R. Da sestougao stoji temenom nastranu, kolone bi bile
+ * uspravne i morale bi da drze isti razmak kroz sve paralele — a to je upravo
+ * ono sto ne moze.
+ *
+ * Sto ostaje: sever-jug razmak koristi 111,13 km po stepenu, a stvarna duzina
+ * meridijanskog stepena se preko Srbije menja od 111,0 do 111,2 km. To je
+ * ispod 0,1% i ne vidi se. Pravo resenje je i dalje zvanicni CRS (UTM 34N).
  */
 
 const R_PO_KORAKU = 1 / Math.sqrt(3 * Math.sqrt(3) / 2);   // 0.6204...
@@ -188,28 +196,30 @@ function napraviMrezu(korakKm, granica) {
     if (la < minLat) minLat = la;
     if (la > maxLat) maxLat = la;
   }
-  const [x0, y0] = lonLatUKm(minLon, minLat);
-  const [x1, y1] = lonLatUKm(maxLon, maxLat);
 
   const R = korakKm * R_PO_KORAKU;
-  const dx = 1.5 * R;                 // razmak kolona
-  const dy = Math.sqrt(3) * R;        // razmak vrsta
-  const nx = Math.ceil((x1 - x0) / dx);
-  const ny = Math.ceil((y1 - y0) / dy);
+  const dyKm = 1.5 * R;                 // razmak vrsta, sever-jug
+  const dxKm = Math.sqrt(3) * R;        // razmak kolona, istok-zapad
+  const dLat = dyKm / KM_PO_STEPENU_LAT;
+  const ny = Math.ceil((maxLat - minLat) / dLat);
 
   const lon = [], lat = [], gx = [], gy = [];
+  let nx = 0;
   for (let j = 0; j < ny; j++) {
-    for (let i = 0; i < nx; i++) {
-      const x = x0 + (i + 0.5) * dx;
-      // svaka druga kolona pomerena za pola vrste — bez toga se ne slazu
-      const y = y0 + (j + 0.5) * dy + (i & 1 ? dy / 2 : 0);
-      const [lo, la] = kmULonLat(x, y);
+    const la = minLat + (j + 0.5) * dLat;
+    // razmak kolona bas za ovu paralelu — otud i teme nagore
+    const dLon = dxKm / (111.320 * Math.cos(la * Math.PI / 180));
+    const pomak = (j & 1) ? 0.5 : 0;    // svaka druga vrsta za pola kolone
+    const kolona = Math.ceil((maxLon - minLon) / dLon);
+    if (kolona > nx) nx = kolona;
+    for (let i = 0; i < kolona; i++) {
+      const lo = minLon + (i + 0.5 + pomak) * dLon;
       if (!uPoligonu(lo, la, poly)) continue;
       lon.push(lo); lat.push(la); gx.push(i); gy.push(j);
     }
   }
   return {
-    korakKm, poluprecnikKm: R, nx, ny, x0, y0,
+    korakKm, poluprecnikKm: R, nx, ny,
     minLon, maxLon, minLat, maxLat,
     n: lon.length,
     lon: Float64Array.from(lon),

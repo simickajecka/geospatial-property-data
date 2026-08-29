@@ -499,7 +499,7 @@ function slojevi() {
          решетком на којој тачке леже, па се не подешава. */
       diskResolution: 6,
       radius: poluprecnik,
-      angle: 0,
+      angle: 30,
       extruded: true,
       coverage: pokrivenost,
       elevationScale: visinaSkala,
@@ -548,7 +548,7 @@ function slojevi() {
       data: probodeni,
       diskResolution: 6,
       radius: poluprecnik,
-      angle: 0,
+      angle: 30,
       extruded: false,
       coverage: 1,
       getPosition: k => [D.mreza.lon[k], D.mreza.lat[k]],

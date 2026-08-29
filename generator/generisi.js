@@ -96,9 +96,11 @@ tok.on('close', () => {
     celija: {
       oblik: 'sestougao',
       poluprecnik_m: Math.round(mreza.poluprecnikKm * 1000),
-      razmak_kolona_m: Math.round(1.5 * mreza.poluprecnikKm * 1000),
-      razmak_vrsta_m: Math.round(Math.sqrt(3) * mreza.poluprecnikKm * 1000),
-      napomena: 'temena na istoku i zapadu (deck.gl ColumnLayer, angle 0)'
+      razmak_vrsta_m: Math.round(1.5 * mreza.poluprecnikKm * 1000),
+      razmak_kolona_m: Math.round(Math.sqrt(3) * mreza.poluprecnikKm * 1000),
+      ugao: 30,
+      napomena: 'teme nagore (deck.gl ColumnLayer, angle 30); svaka vrsta lezi ' +
+                'na jednoj paraleli, razmak kolona se racuna za tu paralelu'
     },
     broj_tacaka: mreza.n,
     broj_meseci: M,

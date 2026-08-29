@@ -4,11 +4,12 @@
   "celija": {
     "oblik": "sestougao",
     "poluprecnik_m": 1861,
-    "razmak_kolona_m": 2792,
-    "razmak_vrsta_m": 3224,
-    "napomena": "temena na istoku i zapadu (deck.gl ColumnLayer, angle 0)"
+    "razmak_vrsta_m": 2792,
+    "razmak_kolona_m": 3224,
+    "ugao": 30,
+    "napomena": "teme nagore (deck.gl ColumnLayer, angle 30); svaka vrsta lezi na jednoj paraleli, razmak kolona se racuna za tu paralelu"
   },
-  "broj_tacaka": 10132,
+  "broj_tacaka": 10120,
   "broj_meseci": 96,
   "prvi_mesec": "2019-01",
   "poslednji_mesec": "2026-12",
@@ -119,17 +120,17 @@
   "cene_bin": {
     "tip": "uint16 little-endian",
     "raspored": "mesec-major: [mesec0: sve tacke][mesec1: sve tacke]...",
-    "duzina_bajtova": 1945344,
+    "duzina_bajtova": 1943040,
     "opseg_vrednosti": [
       1000,
-      2664
+      2630
     ]
   },
   "indeks": {
     "objasnjenje": "indeks = 1.0 u 2019-01",
     "opseg_na_kraju": [
       1.382,
-      2.136
+      2.135
     ]
   },
   "granica": "PRIBLIZNA kontura ugradjena u generator.js - zameniti zvanicnom granicom iz GeoSrbije"
