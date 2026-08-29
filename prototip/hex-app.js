@@ -82,6 +82,19 @@ const PALETA = [
   [209,  55,  78]
 ];
 
+/* Палета за одступање од просека месеца — расипајућа, са средином на просеку.
+   ColorBrewer RdYlBu, шест степени, обрнут редослед: испод просека хладно,
+   изнад просека топло. Изабрана је зато што издваја смер, а не само јачину,
+   и зато што остаје читљива и особама које слабије разликују црвено и зелено. */
+const PALETA_ODSTUPANJE = [
+  [ 69, 117, 180],
+  [145, 191, 219],
+  [224, 243, 248],
+  [254, 224, 144],
+  [252, 141,  89],
+  [215,  48,  39]
+];
+
 /* Исти материјал као у примеру */
 const MATERIJAL = {
   ambient: 0.64,
@@ -106,16 +119,46 @@ const KORAK_ANIMACIJE = 130;
    значило да deck.gl сваки пут поново саставља шејдер. */
 const filter = new DataFilterExtension({ filterSize: 2 });
 
-/* Боја носи цену, у шест степени — исто како је HexagonLayer делио свој
-   colorRange, да слика остане онаква каква је била. */
-function bojaZaCenu(cena, target) {
-  let u = (cena - CENA_MIN) / (CENA_MAX - CENA_MIN);
+/* Боја из рампе, непрекидно између степени.
+   HexagonLayer је свој colorRange делио на шест степени, па је глатка површина
+   излазила као шест равних платоа са оштрим ивицама — контуре, не површина.
+   Пошто цена јесте непрекидна величина, овде се између суседних степени
+   интерполира. Легенда је зато исписана као прелив, а не као шест поља. */
+function bojaIzRampe(paleta, u, target) {
   u = u < 0 ? 0 : (u > 1 ? 1 : u);
-  let i = Math.floor(u * PALETA.length);
-  if (i >= PALETA.length) i = PALETA.length - 1;
-  const b = PALETA[i];
-  target[0] = b[0]; target[1] = b[1]; target[2] = b[2]; target[3] = 255;
+  const p = u * (paleta.length - 1);
+  const i = Math.min(paleta.length - 2, Math.floor(p));
+  const f = p - i;
+  const a = paleta[i], b = paleta[i + 1];
+  target[0] = a[0] + (b[0] - a[0]) * f;
+  target[1] = a[1] + (b[1] - a[1]) * f;
+  target[2] = a[2] + (b[2] - a[2]) * f;
+  target[3] = 255;
   return target;
+}
+
+/* ---------- шта боја носи ----------
+   „цена“      — апсолутна цена по m², непроменљив опсег кроз свих 96 месеци.
+                 Упоредиво међу месецима, али у првим годинама цела земља лежи
+                 у доњем делу опсега, па се просторна разлика једва види.
+   „одступање“ — однос према просеку тог месеца. Свака слика се сама
+                 нормализује, па се распоред скупог и јефтиног види подједнако
+                 добро и 2019. и 2026. Опсег је симетричан у логаритму и рачуна
+                 се једном, из целог низа, да не трепери из месеца у месец. */
+
+let bojaRezim = "cena";
+let prosekMeseca = null;     // просек по месецу, преко целе мреже
+let logOdstupanja = 1;       // највеће |ln(цена/просек)| у целом низу
+
+function bojaZaCelija(k, target) {
+  if (bojaRezim === "odstupanje") {
+    const p = prosekMeseca[t];
+    const r = p > 0 ? cenaSad[k] / p : 1;
+    return bojaIzRampe(PALETA_ODSTUPANJE,
+      0.5 + Math.log(r) / (2 * logOdstupanja), target);
+  }
+  return bojaIzRampe(PALETA,
+    (cenaSad[k] - CENA_MIN) / (CENA_MAX - CENA_MIN), target);
 }
 
 /* Висина носи индекс. Раније је ово радио HexagonLayer преко elevationDomain
@@ -191,6 +234,12 @@ function procitajParametre() {
   if ((v = broj("visina", 5, 220)) !== null) { VISINA_ZADATA = v; }
 
   if (p.get("dijagnostika") === "1") dijagnostika = true;
+
+  if (p.get("boja") === "odstupanje") {
+    bojaRezim = "odstupanje";
+    const el = document.getElementById("boja");
+    if (el) el.value = "odstupanje";
+  }
 
   if (p.has("mesec")) {
     const m = p.get("mesec");
@@ -329,6 +378,31 @@ function pripremi() {
   cenaSad = new Float32Array(n);
   indeksSad = new Float32Array(n);
 
+  /* Просек по месецу и највеће одступање од њега у целом низу. Рачуна се
+     једном, овде, да режим „одступање“ има непроменљив опсег — иначе би боја
+     треперила из месеца у месец, што је баш замка коју deck.gl пример има са
+     самоподешавајућим доменом. Држимо се односа, не логаритама, па се логаритам
+     узима само двапут на крају. */
+  prosekMeseca = new Float32Array(M);
+  let najveciOdnos = 1, najmanjiOdnos = 1;
+  for (let i = 0; i < M; i++) {
+    const off = i * n;
+    let zbir = 0;
+    for (let k = 0; k < n; k++) zbir += cene[off + k];
+    const p = zbir / n;
+    prosekMeseca[i] = p;
+    if (p <= 0) continue;
+    for (let k = 0; k < n; k++) {
+      const r = cene[off + k] / p;
+      if (r > najveciOdnos) najveciOdnos = r;
+      if (r < najmanjiOdnos) najmanjiOdnos = r;
+    }
+  }
+  logOdstupanja = Math.max(
+    Math.log(najveciOdnos),
+    najmanjiOdnos > 0 ? -Math.log(najmanjiOdnos) : 0
+  ) || 1;
+
   /* Груба мера насељености: близина градова плус ретка расута села.
      У стварном послу ово замењује слој зграда или грађевинско подручје. */
   const sumSela = G.napraviSum(4242, 3, 40);
@@ -430,7 +504,7 @@ function slojevi() {
       coverage: pokrivenost,
       elevationScale: visinaSkala,
 
-      getFillColor: (d, { index, target }) => bojaZaCenu(cenaSad[index], target),
+      getFillColor: (d, { index, target }) => bojaZaCelija(index, target),
       getElevation: (d, { index }) => visinaZaIndeks(indeksSad[index]),
 
       /* Оба филтера иду на графичку: цена преко прага перцентила и ранг
@@ -448,7 +522,7 @@ function slojevi() {
       material: MATERIJAL,
       pickable: pikovanje,
       updateTriggers: {
-        getFillColor: t,
+        getFillColor: t + "/" + bojaRezim,
         getElevation: t,
         getFilterValue: t
       },
@@ -537,6 +611,34 @@ const dek = new DeckGL(Object.assign({
 
 /* ---------- управљање ---------- */
 
+/* ---------- легенда ----------
+   Трака је прелив, не шест поља, јер је и боја на карти сад непрекидна.
+   Натпис и оса прате изабрани режим. */
+
+function osveziLegendu() {
+  const naslov = document.getElementById("legenda-naslov");
+  const traka = document.getElementById("legenda-traka");
+  const osa = document.getElementById("legenda-osa");
+  if (!naslov || !traka || !osa) return;
+
+  const paleta = bojaRezim === "odstupanje" ? PALETA_ODSTUPANJE : PALETA;
+  const stepeni = paleta.map((b, i) =>
+    "rgb(" + b[0] + "," + b[1] + "," + b[2] + ") " +
+    (100 * i / (paleta.length - 1)).toFixed(1) + "%");
+  traka.style.background = "linear-gradient(to right, " + stepeni.join(", ") + ")";
+
+  if (bojaRezim === "odstupanje") {
+    const pct = Math.round((Math.exp(logOdstupanja) - 1) * 100);
+    naslov.textContent = "Боја — одступање од просека месеца";
+    osa.innerHTML = "<span>−" + pct + " %</span><span>просек</span><span>+" +
+                    pct + " %</span>";
+    osa.style.justifyContent = "space-between";
+  } else {
+    naslov.textContent = "Боја — цена по m²";
+    osa.innerHTML = "<span>" + CENA_MIN + " €</span><span>" + CENA_MAX + " €</span>";
+  }
+}
+
 function osvezi() {
   izracunajPrag();
   dek.setProps({ layers: slojevi() });
@@ -581,6 +683,12 @@ veziKlizac("pokrivenost", v => pokrivenost = v,  v => v.toFixed(2).replace(".", 
 veziKlizac("percentil",   v => percentil = v,    v => v);
 veziKlizac("visina",      v => visinaSkala = v,  v => v);
 veziKlizac("naseljeno",   v => { naseljenoUdeo = v; primeniNaseljenost(); }, v => v + " %");
+
+document.getElementById("boja").addEventListener("change", e => {
+  bojaRezim = e.target.value === "odstupanje" ? "odstupanje" : "cena";
+  osveziLegendu();
+  osvezi();
+});
 
 document.getElementById("klizac").addEventListener("input", e => {
   t = +e.target.value; primeniMesec(t); osvezi();
@@ -698,6 +806,7 @@ setTimeout(async () => {
       const o = document.getElementById("oznaka-podataka");
       if (o) o.textContent = PODACI.napomena;
     }
+    osveziLegendu();
     osvezi();
     const u = document.getElementById("ucitavanje");
     if (u) u.remove();
