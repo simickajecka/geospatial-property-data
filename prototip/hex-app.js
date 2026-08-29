@@ -204,7 +204,7 @@ let visinaSkala = 0;
 
 /* ---------- подешавања из адресе ----------
    Адреса може да носи подешавања, па се дели готов поглед:
-     hexagon-layer.html?naseljeno=10&mesec=2024-06&precnik=4000
+     hexagon-layer.html?naseljeno=10&mesec=2024-06&boja=odstupanje
    Ради и кад се фајл отвори двокликом, преко file:// адресе. */
 
 function procitajParametre() {
