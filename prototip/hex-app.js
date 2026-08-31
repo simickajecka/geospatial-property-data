@@ -72,7 +72,18 @@ const M = MESECI.length;
 const CENA_MIN = 1000, CENA_MAX = 2700;
 const IND_MIN = 1.0,  IND_MAX = 2.2;
 
-/* Иста палета као у deck.gl примеру */
+/* Иста палета као у deck.gl примеру — подразумевана, да приказ остане
+   препознатљиво тај пример.
+
+   Има две мане, обе измерене. Прво, светлина јој није монотона: расте до
+   средине опсега (1680 €/m², L=0,89) па пада, тако да најјефтинија (L=0,26)
+   и најскупља (L=0,17) ћелија изгледају подједнако тамно — однос 1,4:1, а
+   WCAG за графичке елементе тражи 3:1. Друго, кораци 1680→2020 €/m² се под
+   деутеранопијом стапају у једну боју (размак 0,008 у Oklab-у, где је испод
+   0,05 већ неразазнатљиво).
+
+   У примеру то мање смета јер боја носи БРОЈ незгода, па је већина
+   шестоуглова при дну опсега. Овде боји целу земљу непрекидно. */
 const PALETA = [
   [  1, 152, 189],
   [ 73, 227, 206],
@@ -80,6 +91,25 @@ const PALETA = [
   [254, 237, 177],
   [254, 173,  84],
   [209,  55,  78]
+];
+
+/* Приступачна замена: inferno, подигнутог доњег краја.
+   Светлина расте монотоно кроз цео опсег (однос крајева 8,9:1), па
+   јефтино тоне у подлогу а скупо гори — иста граматика коју користи и
+   рампа одступања. Најмањи корак међу суседима: 0,091 нормално, 0,084
+   деутеранопија, 0,050 протанопија.
+
+   Доњи крај НИЈЕ црн, него L=0,047 — 1,5:1 према подлози. Прави inferno
+   почиње од скоро црне, а како се празне ћелије више не цртају, најјефтинија
+   ћелија би тада изгледала као рупа у подацима. */
+const PALETA_PRISTUPACNA = [
+  [ 84,  36, 126],
+  [126,  42, 122],
+  [170,  52, 104],
+  [208,  74,  76],
+  [236, 116,  44],
+  [249, 176,  34],
+  [252, 233, 130]
 ];
 
 /* Палета за одступање — расипајућа, али са ТАМНОМ средином.
@@ -201,7 +231,15 @@ function napraviRampu(paleta) {
 }
 
 const RAMPA_CENA = napraviRampu(PALETA);
+const RAMPA_CENA_PRISTUPACNA = napraviRampu(PALETA_PRISTUPACNA);
 const RAMPA_ODSTUPANJA = napraviRampu(PALETA_ODSTUPANJE);
+
+/* Која се рампа тренутно користи за цену. Мења се тачкастим дугметом поред
+   легенде, и преко адресе `?paleta=pristupacna`. Тиче се само режима „цена“ —
+   рампа одступања је већ отпорна на слабије разликовање боја (најмањи корак
+   0,143 под деутеранопијом), па за њу нема шта да се бира. */
+let paletaCene = "deck";
+const rampaCene = () => paletaCene === "pristupacna" ? RAMPA_CENA_PRISTUPACNA : RAMPA_CENA;
 
 /* CSS прелив за легенду, из исте таблице — да трака и карта не оду у различите
    боје ако се палета промени. */
@@ -243,7 +281,7 @@ function bojaZaCelija(k, target) {
     return bojaIzRampe(RAMPA_ODSTUPANJA,
       0.5 + Math.log(r) / (2 * logOdstupanja), target);
   }
-  return bojaIzRampe(RAMPA_CENA,
+  return bojaIzRampe(rampaCene(),
     (cenaSad[k] - CENA_MIN) / (CENA_MAX - CENA_MIN), target);
 }
 
@@ -329,6 +367,8 @@ function procitajParametre() {
   if ((v = broj("visina", 5, 220)) !== null) { VISINA_ZADATA = v; }
 
   if (p.get("dijagnostika") === "1") dijagnostika = true;
+
+  if (p.get("paleta") === "pristupacna") paletaCene = "pristupacna";
 
   if (p.get("boja") === "odstupanje") {
     bojaRezim = "odstupanje";
@@ -726,7 +766,7 @@ function slojevi() {
         return false;
       },
       updateTriggers: {
-        getFillColor: t + "/" + bojaRezim,
+        getFillColor: t + "/" + bojaRezim + "/" + paletaCene,
         getElevation: t,
         getFilterValue: t
       },
@@ -1010,7 +1050,25 @@ function osveziLegendu() {
   if (!naslov || !traka || !osa) return;
 
   traka.style.background = relivRampe(
-    bojaRezim === "odstupanje" ? RAMPA_ODSTUPANJA : RAMPA_CENA);
+    bojaRezim === "odstupanje" ? RAMPA_ODSTUPANJA : rampaCene());
+
+  /* Тачкасто дугме показује палету на коју би се прешло, не тренутну — да се
+     види шта се добија пре клика. У режиму одступања се склања: тамо нема
+     избора. */
+  const dugmePalete = document.getElementById("paleta-dugme");
+  if (dugmePalete) {
+    const uOdstupanju = bojaRezim === "odstupanje";
+    dugmePalete.style.display = uOdstupanju ? "none" : "";
+    if (!uOdstupanju) {
+      const druga = paletaCene === "pristupacna" ? RAMPA_CENA : RAMPA_CENA_PRISTUPACNA;
+      dugmePalete.style.background = relivRampe(druga);
+      dugmePalete.title = paletaCene === "pristupacna"
+        ? "Врати палету из deck.gl примера"
+        : "Пређи на приступачну палету: светлина расте кроз цео опсег, " +
+          "кораци се не стапају при слабијем разликовању боја";
+      dugmePalete.setAttribute("aria-pressed", paletaCene === "pristupacna" ? "true" : "false");
+    }
+  }
 
   if (bojaRezim === "odstupanje") {
     const pct = Math.round((Math.exp(logOdstupanja) - 1) * 100);
@@ -1088,6 +1146,12 @@ veziKlizac("pokrivenost", v => pokrivenost = v,  v => v.toFixed(2).replace(".", 
 veziKlizac("percentil",   v => percentil = v,    v => v);
 veziKlizac("visina",      v => visinaSkala = v,  v => v);
 veziKlizac("obuhvat",     v => { obuhvatUdeo = v; primeniObuhvat(); }, v => v + " %");
+
+document.getElementById("paleta-dugme").addEventListener("click", () => {
+  paletaCene = paletaCene === "pristupacna" ? "deck" : "pristupacna";
+  osveziLegendu();
+  osvezi();
+});
 
 document.getElementById("boja").addEventListener("change", e => {
   bojaRezim = e.target.value === "odstupanje" ? "odstupanje" : "cena";

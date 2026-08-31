@@ -75,6 +75,17 @@ button.radi { background: #d1374e; border-color: #d1374e; color: #fff; }
 
 /* --- легенде --- */
 .naslovak { font-size: 11px; color: rgb(140,148,160); margin: 0 0 5px; }
+
+/* Тачкасто дугме поред натписа легенде — мења палету цене.
+   Испуна му је прелив ДРУГЕ палете, да се пре клика види шта се добија. */
+.legenda-glava { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.tacka-dugme {
+  width: 15px; height: 15px; flex: none; padding: 0; border-radius: 50%;
+  border: 1px solid rgba(160,167,180,.55); cursor: pointer;
+  background: rgb(120,130,145);
+}
+.tacka-dugme:hover { border-color: #fff; }
+.tacka-dugme:focus-visible { outline: 2px solid #d1374e; outline-offset: 2px; }
 .traka { height: 12px; display: flex; }
 .traka i { flex: 1; }
 .osa { display: flex; justify-content: space-between; color: rgb(140,148,160);
@@ -193,7 +204,11 @@ button.radi { background: #d1374e; border-color: #d1374e; color: #fff; }
 
   <hr class="crta">
 
-  <p class="naslovak" id="legenda-naslov">Боја — цена по m²</p>
+  <div class="legenda-glava">
+    <p class="naslovak" id="legenda-naslov">Боја — цена по m²</p>
+    <button type="button" id="paleta-dugme" class="tacka-dugme"
+            aria-label="Промени палету" aria-pressed="false"></button>
+  </div>
   <div class="traka" id="legenda-traka"></div>
   <div class="osa" id="legenda-osa"><span>1000 €</span><span>2700 €</span></div>
 
