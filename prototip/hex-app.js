@@ -111,6 +111,13 @@ let polozaji = null, zaSloj = null;
 let cenaSad = null, indeksSad = null, rang = null;
 let brojUObuhvatu = 0;
 
+/* Први месец у ком ћелија уопште има податак, по ћелији; −1 ако га нема
+   никад. Пуна табла из генератора даје свуда 0. */
+let osnovaMeseca = null;
+
+/* Колико ћелија текући месец нема податак — исписује се у плочи. */
+let brojPraznih = 0;
+
 /* Колико траје један корак анимације и, заједно с тим, претапање између
    два месеца. Иста вредност иде и у setInterval и у transitions. */
 const KORAK_ANIMACIJE = 130;
@@ -348,17 +355,41 @@ async function raspakuj(paket) {
            poluprecnikM: paket.poluprecnikM || null };
 }
 
+/* ---------- празне ћелије ----------
+   Цена 0 значи „нема податка за ту ћелију у том месецу“. Генератор прави
+   пуну таблу, али стварни промет је догађај: у једној ћелији, у једном
+   месецу, трансакција најчешће нема ниједне. Договор о нули стоји и у
+   meta.json (`cene_bin.nula_znaci`).
+
+   Нула је безбедна ознака јер цена од 0 €/m² ионако нема значење. Кад
+   података има свуда — као у генератору — ништа од овога се не активира и
+   приказ ради тачно као раније. */
+const NEMA = 0;
+
 /* Уграђени стварни подаци. Носе тачке и цене; индекс се рачуна овде, као
-   однос према првом месецу, да се у фајлу не држи двапут иста ствар. */
+   однос према првом месецу, да се у фајлу не држи двапут иста ствар.
+
+   Са празнинама први месец не мора да постоји, па се основа помера на први
+   месец у ком ћелија уопште има податак. Због тога индекс више није за све
+   ћелије мерен од исте тачке — која је то тачка чува се у `osnovaMeseca` и
+   облачић је исписује кад није јануар 2019. */
 function izUgradjenih() {
   const n = PODACI.n;
   const mreza = { n, lon: PODACI.lon, lat: PODACI.lat };
   const cene = PODACI.cene;
   const indeks = new Float32Array(n * M);
+  osnovaMeseca = new Int16Array(n).fill(-1);
+
   for (let k = 0; k < n; k++) {
-    const osnova = cene[k];
+    let osnova = 0;
     for (let i = 0; i < M; i++) {
-      indeks[i * n + k] = osnova > 0 ? cene[i * n + k] / osnova : 1;
+      const c = cene[i * n + k];
+      if (c !== NEMA) { osnova = c; osnovaMeseca[k] = i; break; }
+    }
+    for (let i = 0; i < M; i++) {
+      const c = cene[i * n + k];
+      /* Празан месец добија индекс 0 — исти договор као за цену. */
+      indeks[i * n + k] = (c === NEMA || osnova <= 0) ? NEMA : c / osnova;
     }
   }
   return { mreza, cene, indeks };
@@ -396,13 +427,21 @@ function pripremi() {
   let najveciOdnos = 1, najmanjiOdnos = 1;
   for (let i = 0; i < M; i++) {
     const off = i * n;
-    let zbir = 0;
-    for (let k = 0; k < n; k++) zbir += cene[off + k];
-    const p = zbir / n;
+    /* Просек иде преко ћелија које тог месеца ИМАЈУ податак. Да се празне
+       рачунале као нуле, просек би падао са бројем празнина, а не са ценама. */
+    let zbir = 0, imaju = 0;
+    for (let k = 0; k < n; k++) {
+      const c = cene[off + k];
+      if (c === NEMA) continue;
+      zbir += c; imaju++;
+    }
+    const p = imaju ? zbir / imaju : 0;
     prosekMeseca[i] = p;
     if (p <= 0) continue;
     for (let k = 0; k < n; k++) {
-      const r = cene[off + k] / p;
+      const c = cene[off + k];
+      if (c === NEMA) continue;
+      const r = c / p;
       if (r > najveciOdnos) najveciOdnos = r;
       if (r < najmanjiOdnos) najmanjiOdnos = r;
     }
@@ -469,6 +508,7 @@ function izracunajPrag() {
   let ukupno = 0;
   for (let k = 0; k < D.n; k++) {
     if (rang[k] >= brojUObuhvatu) continue;   // те се ионако не цртају
+    if (cenaSad[k] === NEMA) continue;        // празне не улазе у перцентил
     const c = cenaSad[k] | 0;
     BROJAC[c < 0 ? 0 : c > 65535 ? 65535 : c]++;
     ukupno++;
@@ -528,7 +568,9 @@ function slojevi() {
         target[1] = rang[index];
         return target;
       },
-      filterRange: [[0, pragCene], [0, brojUObuhvatu - 1]],
+      /* Доња граница цене је 1, не 0: тиме празне ћелије (цена = 0) испадају
+         из цртања истим филтером који већ носи перцентил, без новог канала. */
+      filterRange: [[1, pragCene], [0, brojUObuhvatu - 1]],
 
       material: MATERIJAL,
       pickable: pikovanje,
@@ -628,13 +670,22 @@ const dek = new DeckGL(Object.assign({
       const k = info.index;
       if (!(k >= 0) || !D || k >= D.n) return null;
 
+      if (cenaSad[k] === NEMA) return null;   // празне се ионако не цртају
+
       const ind = indeksSad[k];
+      /* Кад ћелији први податак не пада у јануар 2019, индекс се мери од њеног
+         првог месеца — па облачић каже од ког, да „+42 %“ не изгледа као раст
+         од почетка низа. */
+      const osnova = osnovaMeseca ? osnovaMeseca[k] : 0;
+      const odKad = (osnova > 0 && MESECI[osnova]) ? "  од " + MESECI[osnova] : "";
       return [
         "ширина: " + D.mreza.lat[k].toFixed(6),
         "дужина: " + D.mreza.lon[k].toFixed(6),
         Math.round(cenaSad[k]) + " €/m²",
-        "индекс " + ind.toFixed(3).replace(".", ",") +
-          "  (+" + Math.round((ind - 1) * 100) + " %)"
+        ind > 0
+          ? "индекс " + ind.toFixed(3).replace(".", ",") +
+            "  (+" + Math.round((ind - 1) * 100) + " %)" + odKad
+          : "индекс: нема основе"
       ].join("\n");
     } catch (e) {
       prijavi("Облачић", e);
@@ -716,13 +767,17 @@ function crtajNizove() {
 
   const nizovi = probodeni.map(nizCelije);
 
-  let vmin = Infinity, vmax = -Infinity;
+  /* Опсег се узима само преко месеци који имају податак. */
+  let vmin = Infinity, vmax = -Infinity, imaIkakvih = false;
   for (const niz of nizovi) {
     for (let i = 0; i < M; i++) {
+      if (niz[i] === NEMA) continue;
+      imaIkakvih = true;
       if (niz[i] < vmin) vmin = niz[i];
       if (niz[i] > vmax) vmax = niz[i];
     }
   }
+  if (!imaIkakvih) { vmin = 0; vmax = 1; }
   if (!(vmax > vmin)) { vmax = vmin + 1; }
 
   const gore = 10, dole = visina - 12;
@@ -740,16 +795,33 @@ function crtajNizove() {
   nizovi.forEach((niz, red) => {
     const b = BOJE_PROBODA[red % BOJE_PROBODA.length];
     c.strokeStyle = "rgb(" + b[0] + "," + b[1] + "," + b[2] + ")";
+    c.fillStyle = c.strokeStyle;
     c.lineWidth = 1.4;
+
+    /* Линија се ПРЕКИДА на празнинама. Спајање преко рупе би нацртало
+       кретање које никад није измерено — управо оно што стварни промет нема.
+       Усамљен месец, без суседа са податком, добија тачку да се не изгуби. */
+    let uNizu = false;
     c.beginPath();
     for (let i = 0; i < M; i++) {
+      if (niz[i] === NEMA) { uNizu = false; continue; }
       const x = uX(i), y = uY(niz[i]);
-      if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
+      if (uNizu) c.lineTo(x, y); else c.moveTo(x, y);
+      uNizu = true;
     }
     c.stroke();
-    /* Тачка на текућем месецу */
-    c.fillStyle = c.strokeStyle;
-    c.beginPath(); c.arc(uX(t), uY(niz[t]), 2.2, 0, Math.PI * 2); c.fill();
+
+    for (let i = 0; i < M; i++) {
+      if (niz[i] === NEMA) continue;
+      const sam = (i === 0 || niz[i - 1] === NEMA) && (i === M - 1 || niz[i + 1] === NEMA);
+      if (!sam) continue;
+      c.beginPath(); c.arc(uX(i), uY(niz[i]), 1.5, 0, Math.PI * 2); c.fill();
+    }
+
+    /* Тачка на текућем месецу — само ако тог месеца податка има. */
+    if (niz[t] !== NEMA) {
+      c.beginPath(); c.arc(uX(t), uY(niz[t]), 2.2, 0, Math.PI * 2); c.fill();
+    }
   });
 
   c.fillStyle = "rgb(140,148,160)";
@@ -766,11 +838,14 @@ function crtajNizove() {
     const b = BOJE_PROBODA[red % BOJE_PROBODA.length];
     const red_ = document.createElement("div");
     red_.className = "pribod";
+    /* Ћелија може бити пробедена, а тог месеца немати податак. */
+    const ima = cenaSad[k] !== NEMA;
     red_.innerHTML =
       '<span class="tacka" style="background:rgb(' + b.join(",") + ')"></span>' +
       '<span class="mesto">' + D.mreza.lat[k].toFixed(3) + ", " +
       D.mreza.lon[k].toFixed(3) + "</span>" +
-      '<span class="cena">' + Math.round(cenaSad[k]) + " €</span>" +
+      '<span class="cena"' + (ima ? "" : ' style="color:rgb(120,128,140);font-weight:normal"') +
+      ">" + (ima ? Math.round(cenaSad[k]) + " €" : "нема") + "</span>" +
       '<button class="skini" type="button" aria-label="Скини">×</button>';
     red_.querySelector(".skini").addEventListener("click", () => probodi(k));
     spisak.appendChild(red_);
@@ -814,21 +889,33 @@ function osvezi() {
      преко свих тачака, па је спуштање обухвата на 10 % остављало
      просек целе Србије поред приказаних десет посто — а то су баш најскупље
      ћелије, тако да је бројка била нижа од свега на екрану. */
-  let zbir = 0, imax = 0, koliko = 0;
+  let zbir = 0, imax = 0, koliko = 0, prazno = 0;
   for (let k = 0; k < D.n; k++) {
     if (rang[k] >= brojUObuhvatu) continue;
+    if (cenaSad[k] === NEMA) { prazno++; continue; }   // нема податка овог месеца
     if (cenaSad[k] > pragCene) continue;
     zbir += cenaSad[k];
     if (indeksSad[k] > imax) imax = indeksSad[k];
     koliko++;
   }
+  brojPraznih = prazno;
 
   document.getElementById("prosek").textContent =
     koliko ? Math.round(zbir / koliko) + " €" : "—";
   document.getElementById("najveci").textContent =
-    koliko ? "+" + Math.round((imax - 1) * 100) + " %" : "—";
+    koliko && imax > 0 ? "+" + Math.round((imax - 1) * 100) + " %" : "—";
   document.getElementById("prikazano").textContent =
     koliko.toLocaleString("sr-RS");
+
+  /* Ред „без податка“ се појављује само кад празнина има — на пуној табли
+     из генератора остаје сакривен, па се плоча не мења без потребе. */
+  const redPraznih = document.getElementById("red-praznih");
+  if (redPraznih) {
+    redPraznih.style.display = prazno ? "" : "none";
+    const br = document.getElementById("praznih");
+    if (br) br.textContent = prazno.toLocaleString("sr-RS") +
+      "  (" + Math.round(100 * prazno / (brojUObuhvatu || 1)) + " %)";
+  }
 
   crtajNizove();
 }

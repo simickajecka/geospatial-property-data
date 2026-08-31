@@ -23,6 +23,7 @@ const korak = parseFloat(arg('korak', '0.5'));
 const izlaz = arg('izlaz', './podaci');
 const maxLong = parseInt(arg('uzorak', '5000'), 10);
 const rezim = arg('rezim', 'opseg');   // 'opseg' | 'realno'
+const promet = parseInt(arg('promet', '0'), 10);   // 0 = puna tabla
 
 fs.mkdirSync(izlaz, { recursive: true });
 
@@ -54,6 +55,48 @@ console.log('Meseci: ' + M + '  (' + serija.meseci[0] + ' .. ' + serija.meseci[M
   if (delovi.length) fs.appendFileSync(path.join(izlaz, 'tacke.csv'), delovi.join(''));
 }
 
+/* ---- praznine: koje celija-mesece uopste pokriva promet ----
+ *
+ * Bez --promet je tabla puna, kao i do sada: svaka celija ima cenu u svakom
+ * mesecu. To stvarni izvod nema. Sa --promet N se odigra N prometa godisnje,
+ * rasporedjenih po blizini gradova, i cena ostaje samo tamo gde je tog meseca
+ * bilo bar jedne transakcije. Ostalo se upisuje kao 0 — dogovorena oznaka za
+ * "nema podatka".
+ *
+ * Sluzi da se prikaz i ceo lanac isprobaju na rupicavim podacima pre nego sto
+ * stigne pravi izvod. Sam raspored je izmisljen kao i cene.
+ */
+let prisutno = null, pokrivenihCelijaMeseci = 0;
+if (promet > 0) {
+  const t0p = Date.now();
+  const skor = G.skorNaseljenosti(mreza);
+  /* Cetvrti stepen: promet je zgusnutiji od same naseljenosti. */
+  const tezina = new Float64Array(mreza.n);
+  let zbirT = 0;
+  for (let k = 0; k < mreza.n; k++) { tezina[k] = Math.pow(skor[k], 4); zbirT += tezina[k]; }
+  const kumulativ = new Float64Array(mreza.n);
+  let s = 0;
+  for (let k = 0; k < mreza.n; k++) { s += tezina[k] / zbirT; kumulativ[k] = s; }
+
+  prisutno = new Uint8Array(mreza.n * M);
+  const rand = G.mulberry32(20260831);
+  const ukupnoTransakcija = Math.round(promet * M / 12);
+  for (let i = 0; i < ukupnoTransakcija; i++) {
+    const u = rand();
+    let lo = 0, hi = mreza.n - 1;
+    while (lo < hi) { const mid = (lo + hi) >> 1; if (kumulativ[mid] < u) lo = mid + 1; else hi = mid; }
+    const t = Math.floor(rand() * M);
+    prisutno[t * mreza.n + lo] = 1;
+  }
+  for (let i = 0; i < prisutno.length; i++) if (prisutno[i]) pokrivenihCelijaMeseci++;
+  console.log('Promet: ' + promet.toLocaleString('sr-RS') + ' godisnje  ->  ' +
+    ukupnoTransakcija.toLocaleString('sr-RS') + ' transakcija, pokriveno ' +
+    pokrivenihCelijaMeseci.toLocaleString('sr-RS') + ' od ' +
+    (mreza.n * M).toLocaleString('sr-RS') + ' celija-meseci (' +
+    (100 * pokrivenihCelijaMeseci / (mreza.n * M)).toFixed(1) + ' %)  ' +
+    (Date.now() - t0p) + ' ms');
+}
+
 // ---- cene.bin (uint16, mesec-major) + uzorak u long formatu ----
 const tok = fs.createWriteStream(path.join(izlaz, 'cene.bin'));
 const longRedovi = ['id,mesec,cena_eur_m2,indeks\n'];
@@ -65,11 +108,14 @@ for (let t = 0; t < M; t++) {
   const { cene, indeks, oznaka } = serija.sledeciMesec(t);
   const buf = Buffer.allocUnsafe(mreza.n * 2);
   for (let k = 0; k < mreza.n; k++) {
-    const v = Math.round(cene[k]);
+    /* 0 znaci "nema podatka" — vidi opis praznina gore. */
+    const v = (prisutno && !prisutno[t * mreza.n + k]) ? 0 : Math.round(cene[k]);
     buf.writeUInt16LE(v, k * 2);
-    if (v < globalMin) globalMin = v;
-    if (v > globalMax) globalMax = v;
-    if (t === M - 1) {
+    if (v > 0) {
+      if (v < globalMin) globalMin = v;
+      if (v > globalMax) globalMax = v;
+    }
+    if (t === M - 1 && v > 0) {
       if (indeks[k] < indeksMin) indeksMin = indeks[k];
       if (indeks[k] > indeksMax) indeksMax = indeks[k];
     }
@@ -115,7 +161,21 @@ tok.on('close', () => {
       tip: 'uint16 little-endian',
       raspored: 'mesec-major: [mesec0: sve tacke][mesec1: sve tacke]...',
       duzina_bajtova: mreza.n * M * 2,
-      opseg_vrednosti: [globalMin, globalMax]
+      opseg_vrednosti: [globalMin, globalMax],
+      nula_znaci: 'nema podatka za tu celiju u tom mesecu'
+    },
+    pokrivenost: promet > 0 ? {
+      promet_godisnje: promet,
+      pokriveno_celija_meseci: pokrivenihCelijaMeseci,
+      od_ukupno: mreza.n * M,
+      udeo: Number((pokrivenihCelijaMeseci / (mreza.n * M)).toFixed(4)),
+      napomena: 'SIMULIRANE praznine - raspored prometa je izmisljen kao i cene'
+    } : {
+      promet_godisnje: null,
+      pokriveno_celija_meseci: mreza.n * M,
+      od_ukupno: mreza.n * M,
+      udeo: 1,
+      napomena: 'puna tabla - svaka celija ima cenu u svakom mesecu'
     },
     indeks: {
       objasnjenje: 'indeks = 1.0 u ' + serija.meseci[0],

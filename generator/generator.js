@@ -438,6 +438,32 @@ function napraviMrezu(korakKm, granica) {
   };
 }
 
+// ------------------------------------------------------- naseljenost
+
+/*
+ * Gruba mera naseljenosti po celiji: blizina gradova plus retka rasuta sela.
+ * Nije podatak o stanovnistvu nego zamena za gradjevinsko podrucje, dok pravi
+ * podatak ne stigne.
+ *
+ * Stoji ovde jer je ista racunica trebala na tri mesta — prikazu (koji njome
+ * uredjuje obuhvat), simulaciji prometa u generisi.js i uzorku u prebroj.js.
+ * Pozivaoci sami dizu rezultat na stepen ako hoce jace zgusnjavanje.
+ */
+function skorNaseljenosti(mreza, seme) {
+  const sumSela = napraviSum(seme === undefined ? 4242 : seme, 3, 40);
+  const skor = new Float32Array(mreza.n);
+  for (let k = 0; k < mreza.n; k++) {
+    const [x, y] = lonLatUKm(mreza.lon[k], mreza.lat[k]);
+    let grad = 0;
+    for (const red of GRADOVI) {
+      const [cx, cy] = lonLatUKm(red[1], red[2]);
+      grad = Math.max(grad, red[3] * Math.exp(-Math.hypot(x - cx, y - cy) / (red[4] * 0.5)));
+    }
+    skor[k] = grad + 0.6 * Math.pow(sumSela(x, y), 3);
+  }
+  return skor;
+}
+
 // ------------------------------------------------------- osnovna cena
 
 function osnovnaCena(mreza, opcije) {
@@ -583,6 +609,6 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     mulberry32, napraviMrezu, osnovnaCena, faktorRasta, napraviSeriju,
     oznakeMeseci, BROJ_MESECI, GODINE, GRADOVI, GRANICA,
-    lonLatUKm, kmULonLat, uPoligonu, napraviSum
+    lonLatUKm, kmULonLat, uPoligonu, napraviSum, skorNaseljenosti
   };
 }
