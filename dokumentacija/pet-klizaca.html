@@ -417,7 +417,7 @@ footer {
       <li><a href="#osnova"><span class="br">00</span>Основа</a></li>
       <li><a href="#celija"><span class="br">—</span>Ћелија</a></li>
       <li><a href="#tok"><span class="br">—</span>Ток</a></li>
-      <li><a href="#naseljeno"><span class="br">01</span>Насељени део</a></li>
+      <li><a href="#obuhvat"><span class="br">01</span>Обухват података</a></li>
       <li><a href="#percentil"><span class="br">02</span>Горњи перцентил</a></li>
       <li><a href="#pokrivenost"><span class="br">03</span>Попуњеност</a></li>
       <li><a href="#visina"><span class="br">04</span>Висина</a></li>
@@ -597,15 +597,15 @@ R <span class="k">=</span> корак / √(3√3 / 2)   <span class="k">кор�
         <div class="crtez" id="crtez-tok"></div>
         <p class="opis-crteza">
           Редослед у плочи је другачији од редоследа деловања. Оба филтера —
-          Насељени део и Горњи перцентил — раде на графичкој, кроз
+          Обухват података и Горњи перцентил — раде на графичкој, кроз
           <code>DataFilterExtension</code>; ниједан не прекраја низ података.
         </p>
       </div>
     </section>
 
     <!-- ================= 1. НАСЕЉЕНИ ДЕО ================= -->
-    <section id="naseljeno">
-      <h2><span class="korak">Корак 1</span> Насељени део</h2>
+    <section id="obuhvat">
+      <h2><span class="korak">Корак 1</span> Обухват података</h2>
 
       <div class="klizac-glava">
         <span class="znak">опсег <b>3 – 100 %</b></span>
@@ -614,9 +614,17 @@ R <span class="k">=</span> корак / √(3√3 / 2)   <span class="k">кор�
       </div>
 
       <p class="vodeci">
-        Одлучује <b>које ћелије уопште улазе</b> у приказ. Задржава најнасељенијих
-        p % мреже, остало не црта.
+        Одлучује <b>које ћелије уопште улазе</b> у приказ. Задржава p % мреже —
+        оне ћелије које су ближе градовима — а остало не црта.
       </p>
+
+      <div class="napomena">
+        <b>Проценат је удео исцртаних ћелија, не процена насељене површине.</b>
+        Ништа у овом ланцу не мери становништво: ћелије се рангирају по близини
+        градова и мало шума, што је груба замена за грађевинско подручје док
+        прави податак не стигне. Клизач се раније звао „насељени део“ — то је
+        тврдило нешто што подаци не носе, па је преименован.
+      </div>
 
       <div class="formula">задржано <span class="k">=</span> round( 39.303 × p / 100 )        <span class="k">p = 100 % → 39.303   p = 30 % → 12.168   p = 10 % → 4.056</span>
 
@@ -625,15 +633,15 @@ R <span class="k">=</span> корак / √(3√3 / 2)   <span class="k">кор�
 
       <p>
         Клизач више не прекраја низ података. Свака ћелија носи свој ранг по
-        насељености, а клизач само помера горњу границу тог ранга — филтрирање
-        ради графичка.
+        близини градова, а клизач само помера горњу границу тог ранга —
+        филтрирање ради графичка.
       </p>
 
       <div class="karta">
-        <div class="crtez" id="crtez-naseljeno"></div>
+        <div class="crtez" id="crtez-obuhvat"></div>
         <p class="opis-crteza">
           Иста мрежа на три подешавања. Тачке су узорак стварне мреже, поредак
-          је стварни скор насељености из генератора.
+          је стварни скор близине градова из генератора.
         </p>
       </div>
 
@@ -654,7 +662,7 @@ R <span class="k">=</span> корак / √(3√3 / 2)   <span class="k">кор�
       </p>
       <p>
         Дотад су се рачунале преко целе мреже без обзира на клизаче, па је приказ
-        од 10 % најнасељенијих ћелија показивао просек целе Србије. Пошто су баш
+        од 10 % мреже показивао просек целе Србије. Пошто су баш
         те ћелије најскупље, исписана бројка је била <b>нижа од свега на екрану</b>:
       </p>
 
@@ -662,7 +670,7 @@ R <span class="k">=</span> корак / √(3√3 / 2)   <span class="k">кор�
         <table>
           <caption>Просечна цена приказаних ћелија, месец 2026-12</caption>
           <thead>
-            <tr><th>Насељени део</th><th>Ћелија</th><th>Пише у плочи</th><th>Писало је раније</th></tr>
+            <tr><th>Обухват</th><th>Ћелија</th><th>Пише у плочи</th><th>Писало је раније</th></tr>
           </thead>
           <tbody>
             <tr class="istaknut"><td>100 %</td><td>39.303</td><td>1.742 €</td><td>1.742 €</td></tr>
@@ -959,9 +967,9 @@ R <span class="k">=</span> корак / √(3√3 / 2)   <span class="k">кор�
             <tr><th>Ред у плочи</th><th>Од чега зависи</th><th>Реагује на</th></tr>
           </thead>
           <tbody>
-            <tr class="istaknut"><td>Просечна цена</td><td>месец, приказане ћелије</td><td>Насељени део, Горњи перцентил</td></tr>
-            <tr class="istaknut"><td>Највећи раст</td><td>месец, приказане ћелије</td><td>Насељени део, Горњи перцентил</td></tr>
-            <tr class="istaknut"><td>Приказано</td><td>приказане ћелије</td><td>Насељени део, Горњи перцентил</td></tr>
+            <tr class="istaknut"><td>Просечна цена</td><td>месец, приказане ћелије</td><td>Обухват, Горњи перцентил</td></tr>
+            <tr class="istaknut"><td>Највећи раст</td><td>месец, приказане ћелије</td><td>Обухват, Горњи перцентил</td></tr>
+            <tr class="istaknut"><td>Приказано</td><td>приказане ћелије</td><td>Обухват, Горњи перцентил</td></tr>
             <tr><td>Тачака мреже</td><td>ништа, увек 39.303</td><td>ништа</td></tr>
           </tbody>
         </table>
@@ -986,7 +994,7 @@ R <span class="k">=</span> корак / √(3√3 / 2)   <span class="k">кор�
         линком. Ради и кад је фајл отворен двокликом, преко <code>file://</code>.
       </p>
 
-      <div class="formula">cenovna-povrsina-3d.html?naseljeno=10&amp;pokrivenost=0.5&amp;percentil=95&amp;visina=80&amp;mesec=2024-06&amp;boja=odstupanje</div>
+      <div class="formula">cenovna-povrsina-3d.html?obuhvat=10&amp;pokrivenost=0.5&amp;percentil=95&amp;visina=80&amp;mesec=2024-06&amp;boja=odstupanje</div>
 
       <div class="tabela-omot">
         <table>
@@ -994,7 +1002,7 @@ R <span class="k">=</span> корак / √(3√3 / 2)   <span class="k">кор�
             <tr><th>Параметар</th><th>Опсег</th><th>Управљач</th></tr>
           </thead>
           <tbody>
-            <tr><td><code>naseljeno</code></td><td>3 – 100</td><td>Насељени део</td></tr>
+            <tr><td><code>obuhvat</code></td><td>3 – 100</td><td>Обухват података <span style="color:var(--ink-3)">(раније <code>naseljeno</code>, и даље ради)</span></td></tr>
             <tr><td><code>percentil</code></td><td>80 – 100</td><td>Горњи перцентил</td></tr>
             <tr><td><code>pokrivenost</code></td><td>0 – 1</td><td>Попуњеност</td></tr>
             <tr><td><code>visina</code></td><td>5 – 220</td><td>Висина</td></tr>
@@ -1058,7 +1066,7 @@ R <span class="k">=</span> корак / √(3√3 / 2)   <span class="k">кор�
         </div>
         <pre id="tekst-mejl">Управљачи горе десно мењају само приказ, никад податке:
 
-• Насељени део — задржава само најнасељенији део мреже. Мрежа је
+• Обухват података — колики део мреже се црта. Мрежа је
   правилна па на 100 % нема празнина; спуштањем се види како ће
   приказ изгледати са стварним подацима о становима.
 • Горњи перцентил — склања најскупље ћелије са приказа. На 100
@@ -1077,14 +1085,14 @@ R <span class="k">=</span> корак / √(3√3 / 2)   <span class="k">кор�
 подаци леже (шестоугао полупречника 931 m на кораку од 1,5 km).
 
 Подешавања могу да стану у адресу, па се готов поглед пошаље линком:
-...?naseljeno=10&amp;percentil=95&amp;mesec=2024-06&amp;boja=odstupanje</pre>
+...?obuhvat=10&amp;percentil=95&amp;mesec=2024-06&amp;boja=odstupanje</pre>
       </div>
     </section>
 
     <footer>
       Бројке у табелама нису процењене него израчунате из истог генератора који
       приказ користи — шестоугаона мрежа од 39.303 тачака на кораку од 1,5 km,
-      месец 2026-12. Расподела цена, прагови перцентила и поредак насељености су
+      месец 2026-12. Расподела цена, прагови перцентила и поредак близине градова су
       стварни излаз тог рачуна. Бројке у одељку <a href="#celija">Ћелија</a> о
       томе колико је тачака улазило у један шестоугао измерене су на самом
       deck.gl-у, пре измене.
@@ -1139,7 +1147,7 @@ R <span class="k">=</span> корак / √(3√3 / 2)   <span class="k">кор�
     if (!svg) return;
     var koraci = [
       { n: "39.303 ћелија", o: "шестоугаона решетка", k: [] },
-      { n: "избор ћелија", o: "два прага, на графичкој", k: ["Насељени део", "Горњи перцентил"] },
+      { n: "избор ћелија", o: "два прага, на графичкој", k: ["Обухват података", "Горњи перцентил"] },
       { n: "боја и висина", o: "правило по ћелији", k: ["Боја носи"] },
       { n: "цртање", o: "стуб на карти", k: ["Попуњеност", "Висина"] }
     ];
@@ -1180,9 +1188,9 @@ R <span class="k">=</span> корак / √(3√3 / 2)   <span class="k">кор�
     tekst(svg, 8, 18, "РЕДОСЛЕД ДЕЛОВАЊА", "d-tekst").setAttribute("fill", "var(--ink-3)");
   }
 
-  /* ---------------- насељени део ---------------- */
-  function crtajNaseljeno() {
-    var svg = platno("crtez-naseljeno", 880, 300);
+  /* ---------------- обухват података ---------------- */
+  function crtajObuhvat() {
+    var svg = platno("crtez-obuhvat", 880, 300);
     if (!svg || !PODACI) return;
     var pragovi = [100, 30, 10];
     var sirina = 274, razmak = 30, x0 = 8;
@@ -1484,7 +1492,7 @@ R <span class="k">=</span> корак / √(3√3 / 2)   <span class="k">кор�
 
   try { crtajTok(); } catch (e) {}
   try { crtajCelija(); } catch (e) {}
-  try { crtajNaseljeno(); } catch (e) {}
+  try { crtajObuhvat(); } catch (e) {}
   try { crtajPercentil(); } catch (e) {}
   try { crtajPokrivenost(); } catch (e) {}
   try { crtajVisina(); } catch (e) {}

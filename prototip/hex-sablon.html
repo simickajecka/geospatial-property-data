@@ -178,9 +178,9 @@ button.radi { background: #d1374e; border-color: #d1374e; color: #fff; }
   </div>
 
   <div class="red-kontrole">
-    <label for="naseljeno">Насељени део</label>
-    <input type="range" id="naseljeno" min="3" max="100" step="1" value="100">
-    <span class="v" id="naseljeno-v">100 %</span>
+    <label for="obuhvat" title="Колики део мреже се црта. Не мери насељеност — задржава ћелије ближе градовима">Обухват података</label>
+    <input type="range" id="obuhvat" min="3" max="100" step="1" value="100">
+    <span class="v" id="obuhvat-v">100 %</span>
   </div>
 
   <hr class="crta">
@@ -220,9 +220,11 @@ button.radi { background: #d1374e; border-color: #d1374e; color: #fff; }
   <p style="margin:8px 0 0;font-size:10.5px;color:rgb(120,128,140)" id="stanje-podloge">подлога карте: учитавам…</p>
 
   <p class="napomena">
-    Мрежа је правилна, па на 100% нема ниједне празнине. Стварни подаци
-    о становима постоје само тамо где има зграда. Спустите „насељени део“
-    да видите како ће приказ изгледати са правим подацима.
+    Мрежа је правилна, па на 100 % нема ниједне празнине. Стварни подаци о
+    становима постоје само тамо где има зграда. Спуштањем обухвата задржавају
+    се ћелије ближе градовима — груба замена за грађевинско подручје, док
+    прави податак не стигне. Проценат је удео исцртаних ћелија, не процена
+    насељене површине.
   </p>
 </div>
 

@@ -109,7 +109,7 @@ let D = null, t = M - 1, animacija = null;
    положаји једном, цена и индекс текућег месеца. Никаквих ситних објеката. */
 let polozaji = null, zaSloj = null;
 let cenaSad = null, indeksSad = null, rang = null;
-let brojNaseljenih = 0;
+let brojUObuhvatu = 0;
 
 /* Колико траје један корак анимације и, заједно с тим, претапање између
    два месеца. Иста вредност иде и у setInterval и у transitions. */
@@ -169,12 +169,18 @@ function visinaZaIndeks(ind) {
   return u * visinaOpseg;
 }
 
-/* Удео мреже који се приказује, по мери насељености.
-   На 100% приказ је потпуно попуњен — јер је мрежа правилна и свака
-   ћелија унутар границе има вредност. Стварни подаци о становима
-   постоје само тамо где има зграда, па имају празнине. Овај клизач
-   служи да се види како ће приказ изгледати кад дође прави податак. */
-let naseljenoUdeo = 100;
+/* Обухват података: колики део мреже се уопште црта.
+   На 100 % приказ је потпуно попуњен — мрежа је правилна и свака ћелија
+   унутар границе има вредност. Стварни подаци о становима постоје само тамо
+   где има зграда, па имају празнине; овај клизач служи да се унапред види
+   како ће приказ тада изгледати.
+
+   ПАЖЊА НА ИМЕ. Проценат је удео исцртаних ћелија, а не процена насељене
+   површине — ништа у ланцу не мери становништво. Ћелије се задржавају по
+   близини градова (види skor ниже), што је груба замена за грађевинско
+   подручје. Зато клизач више не пише „насељени део“: то је тврдило нешто
+   што подаци не носе. */
+let obuhvatUdeo = 100;
 let poredak = null;
 let pokrivenost = 0.7, percentil = 100;
 
@@ -204,7 +210,7 @@ let visinaSkala = 0;
 
 /* ---------- подешавања из адресе ----------
    Адреса може да носи подешавања, па се дели готов поглед:
-     hexagon-layer.html?naseljeno=10&mesec=2024-06&boja=odstupanje
+     hexagon-layer.html?obuhvat=10&mesec=2024-06&boja=odstupanje
    Ради и кад се фајл отвори двокликом, преко file:// адресе. */
 
 function procitajParametre() {
@@ -225,7 +231,10 @@ function procitajParametre() {
   };
 
   let v;
-  if ((v = broj("naseljeno", 3, 100)) !== null) { naseljenoUdeo = v; postavi("naseljeno", v, v + " %"); }
+  /* `naseljeno` је ранији назив истог подешавања. Остаје да раде адресе
+     које су већ подељене; предност има новији `obuhvat`. */
+  if ((v = broj("obuhvat", 3, 100)) === null) v = broj("naseljeno", 3, 100);
+  if (v !== null) { obuhvatUdeo = v; postavi("obuhvat", v, v + " %"); }
   /* `precnik` је остао из времена кад је величина ћелије била ствар погледа.
      Више није — ћелија је одређена решетком. Стара адреса се не квари, само
      тај део нема дејства. */
@@ -418,21 +427,21 @@ function pripremi() {
   }
   poredak = Array.from({ length: n }, (_, k) => k).sort((a, b) => skor[b] - skor[a]);
 
-  /* Ранг по насељености, по ћелији. Клизач „насељени део“ више не прави нов
+  /* Ранг по близини градова, по ћелији. Клизач обухвата више не прави нов
      низ тачака него само помера горњу границу овог ранга — филтрирање је на
      графичкој, кроз DataFilterExtension. */
   rang = new Float32Array(n);
   for (let i = 0; i < n; i++) rang[poredak[i]] = i;
 
   primeniMesec(t);
-  primeniNaseljenost();
+  primeniObuhvat();
 }
 
-/* Задржава само најнасељенији део мреже. */
-function primeniNaseljenost() {
-  brojNaseljenih = naseljenoUdeo >= 100
+/* Задржава само онај део мреже који улази у обухват. */
+function primeniObuhvat() {
+  brojUObuhvatu = obuhvatUdeo >= 100
     ? D.n
-    : Math.max(1, Math.round(D.n * naseljenoUdeo / 100));
+    : Math.max(1, Math.round(D.n * obuhvatUdeo / 100));
 }
 
 function primeniMesec(i) {
@@ -459,7 +468,7 @@ function izracunajPrag() {
   BROJAC.fill(0);
   let ukupno = 0;
   for (let k = 0; k < D.n; k++) {
-    if (rang[k] >= brojNaseljenih) continue;   // те се ионако не цртају
+    if (rang[k] >= brojUObuhvatu) continue;   // те се ионако не цртају
     const c = cenaSad[k] | 0;
     BROJAC[c < 0 ? 0 : c > 65535 ? 65535 : c]++;
     ukupno++;
@@ -510,7 +519,7 @@ function slojevi() {
       getElevation: (d, { index }) => visinaZaIndeks(indeksSad[index]),
 
       /* Оба филтера иду на графичку: цена преко прага перцентила и ранг
-         насељености. Ниједан од њих више не тражи да се низ података
+         обухвата. Ниједан од њих више не тражи да се низ података
          прегради — мења се само filterRange. */
       extensions: [filter],
       filterSize: 2,
@@ -519,7 +528,7 @@ function slojevi() {
         target[1] = rang[index];
         return target;
       },
-      filterRange: [[0, pragCene], [0, brojNaseljenih - 1]],
+      filterRange: [[0, pragCene], [0, brojUObuhvatu - 1]],
 
       material: MATERIJAL,
       pickable: pikovanje,
@@ -802,12 +811,12 @@ function osvezi() {
   document.getElementById("mesec").textContent = MESECI[t];
 
   /* Бројке прате оно што се види, не целу мрежу. Раније су се рачунале
-     преко свих тачака, па је спуштање „насељеног дела“ на 10% остављало
+     преко свих тачака, па је спуштање обухвата на 10 % остављало
      просек целе Србије поред приказаних десет посто — а то су баш најскупље
      ћелије, тако да је бројка била нижа од свега на екрану. */
   let zbir = 0, imax = 0, koliko = 0;
   for (let k = 0; k < D.n; k++) {
-    if (rang[k] >= brojNaseljenih) continue;
+    if (rang[k] >= brojUObuhvatu) continue;
     if (cenaSad[k] > pragCene) continue;
     zbir += cenaSad[k];
     if (indeksSad[k] > imax) imax = indeksSad[k];
@@ -841,7 +850,7 @@ function veziKlizac(id, naStanje, prikaz) {
 veziKlizac("pokrivenost", v => pokrivenost = v,  v => v.toFixed(2).replace(".", ","));
 veziKlizac("percentil",   v => percentil = v,    v => v);
 veziKlizac("visina",      v => visinaSkala = v,  v => v);
-veziKlizac("naseljeno",   v => { naseljenoUdeo = v; primeniNaseljenost(); }, v => v + " %");
+veziKlizac("obuhvat",     v => { obuhvatUdeo = v; primeniObuhvat(); }, v => v + " %");
 
 document.getElementById("boja").addEventListener("change", e => {
   bojaRezim = e.target.value === "odstupanje" ? "odstupanje" : "cena";
