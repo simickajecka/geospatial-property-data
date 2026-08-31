@@ -82,17 +82,28 @@ const PALETA = [
   [209,  55,  78]
 ];
 
-/* Палета за одступање од просека месеца — расипајућа, са средином на просеку.
-   ColorBrewer RdYlBu, шест степени, обрнут редослед: испод просека хладно,
-   изнад просека топло. Изабрана је зато што издваја смер, а не само јачину,
-   и зато што остаје читљива и особама које слабије разликују црвено и зелено. */
+/* Палета за одступање — расипајућа, али са ТАМНОМ средином.
+   Прва верзија је била ColorBrewer RdYlBu, чија је најсветлија тачка (L=0,87)
+   падала тачно на просек. Подлога је на L≈0,015, па су најобичније ћелије
+   светлеле јаче од свега на екрану, а одступања се губила — тачно обрнуто од
+   онога што приказ треба да истакне.
+
+   Овде је средина на L=0,022, једва изнад подлоге: ћелија на просеку утоне у
+   карту, а одступање се пали. Светлина је симетрична око средине (крајеви се
+   разликују за 0,04) и монотоно расте од средине ка оба краја, па се јачина
+   одступања чита и без разликовања боја — што помаже и код слабијег вида за
+   боје, где смер (хладно/топло) остаје једини носилац знака.
+
+   Седам степени, не шест: са парним бројем средина пада ИЗМЕЂУ два степена,
+   па нема тачке која заиста означава просек. */
 const PALETA_ODSTUPANJE = [
-  [ 69, 117, 180],
-  [145, 191, 219],
-  [224, 243, 248],
-  [254, 224, 144],
-  [252, 141,  89],
-  [215,  48,  39]
+  [124, 226, 255],
+  [ 38, 150, 214],
+  [ 26,  78, 120],
+  [ 32,  42,  54],   // средина — референтни ниво месеца
+  [124,  68,  40],
+  [236, 140,  44],
+  [255, 212, 130]
 ];
 
 /* Исти материјал као у примеру */
@@ -126,20 +137,87 @@ const KORAK_ANIMACIJE = 130;
    значило да deck.gl сваки пут поново саставља шејдер. */
 const filter = new DataFilterExtension({ filterSize: 2 });
 
-/* Боја из рампе, непрекидно између степени.
-   HexagonLayer је свој colorRange делио на шест степени, па је глатка површина
-   излазила као шест равних платоа са оштрим ивицама — контуре, не површина.
-   Пошто цена јесте непрекидна величина, овде се између суседних степени
-   интерполира. Легенда је зато исписана као прелив, а не као шест поља. */
-function bojaIzRampe(paleta, u, target) {
-  u = u < 0 ? 0 : (u > 1 ? 1 : u);
-  const p = u * (paleta.length - 1);
-  const i = Math.min(paleta.length - 2, Math.floor(p));
-  const f = p - i;
-  const a = paleta[i], b = paleta[i + 1];
-  target[0] = a[0] + (b[0] - a[0]) * f;
-  target[1] = a[1] + (b[1] - a[1]) * f;
-  target[2] = a[2] + (b[2] - a[2]) * f;
+/* ---------- рампа боја ----------
+   Боја је непрекидна између степени: HexagonLayer је свој colorRange делио на
+   шест равних платоа, па је глатка површина излазила као контуре уместо као
+   површина.
+
+   Мешање иде кроз **Oklab**, не кроз сирови sRGB. Мешање по каналима у sRGB-у
+   даје неравномерне перцептивне кораке и мутне средине — између плаве и
+   наранџасте прође кроз прљаво сиву. Oklab је прављен тако да једнак померај
+   у њему изгледа као једнак померај оку, па прелаз испадне гладак.
+
+   Рампа се једном разложи у таблицу од 256 боја и даље се само индексира:
+   јефтиније је од рачунања по ћелији, а таблица се прави једном, при учитавању. */
+
+function uOklab(r, g, b) {
+  const lin = (v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+  const R = lin(r), G = lin(g), B = lin(b);
+  const l = Math.cbrt(0.4122214708 * R + 0.5363325363 * G + 0.0514459929 * B);
+  const m = Math.cbrt(0.2119034982 * R + 0.6806995451 * G + 0.1073969566 * B);
+  const s = Math.cbrt(0.0883024619 * R + 0.2817188376 * G + 0.6299787005 * B);
+  return [
+    0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s
+  ];
+}
+
+function izOklab(L, A, B) {
+  const l_ = L + 0.3963377774 * A + 0.2158037573 * B;
+  const m_ = L - 0.1055613458 * A - 0.0638541728 * B;
+  const s_ = L - 0.0894841775 * A - 1.2914855480 * B;
+  const l = l_ * l_ * l_, m = m_ * m_ * m_, s = s_ * s_ * s_;
+  const gama = (v) => {
+    v = v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(v, 1 / 2.4) - 0.055;
+    v = Math.round(v * 255);
+    return v < 0 ? 0 : (v > 255 ? 255 : v);
+  };
+  return [
+    gama( 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
+    gama(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
+    gama(-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s)
+  ];
+}
+
+const RAMPA_KORAKA = 256;
+
+function napraviRampu(paleta) {
+  const uLab = paleta.map(c => uOklab(c[0], c[1], c[2]));
+  const out = new Uint8Array(RAMPA_KORAKA * 3);
+  for (let i = 0; i < RAMPA_KORAKA; i++) {
+    const p = (i / (RAMPA_KORAKA - 1)) * (uLab.length - 1);
+    const j = Math.min(uLab.length - 2, Math.floor(p));
+    const f = p - j;
+    const a = uLab[j], b = uLab[j + 1];
+    const rgb = izOklab(
+      a[0] + (b[0] - a[0]) * f,
+      a[1] + (b[1] - a[1]) * f,
+      a[2] + (b[2] - a[2]) * f
+    );
+    out[i * 3] = rgb[0]; out[i * 3 + 1] = rgb[1]; out[i * 3 + 2] = rgb[2];
+  }
+  return out;
+}
+
+const RAMPA_CENA = napraviRampu(PALETA);
+const RAMPA_ODSTUPANJA = napraviRampu(PALETA_ODSTUPANJE);
+
+/* CSS прелив за легенду, из исте таблице — да трака и карта не оду у различите
+   боје ако се палета промени. */
+function relivRampe(rampa) {
+  const koraka = 12, delovi = [];
+  for (let i = 0; i < koraka; i++) {
+    const j = Math.round(i / (koraka - 1) * (RAMPA_KORAKA - 1)) * 3;
+    delovi.push("rgb(" + rampa[j] + "," + rampa[j + 1] + "," + rampa[j + 2] + ") " +
+      (100 * i / (koraka - 1)).toFixed(1) + "%");
+  }
+  return "linear-gradient(to right, " + delovi.join(", ") + ")";
+}
+
+function bojaIzRampe(rampa, u, target) {
+  let i = Math.round((u < 0 ? 0 : (u > 1 ? 1 : u)) * (RAMPA_KORAKA - 1)) * 3;
+  target[0] = rampa[i]; target[1] = rampa[i + 1]; target[2] = rampa[i + 2];
   target[3] = 255;
   return target;
 }
@@ -154,17 +232,18 @@ function bojaIzRampe(paleta, u, target) {
                  се једном, из целог низа, да не трепери из месеца у месец. */
 
 let bojaRezim = "cena";
-let prosekMeseca = null;     // просек по месецу, преко целе мреже
-let logOdstupanja = 1;       // највеће |ln(цена/просек)| у целом низу
+let nivoMeseca = null;       // референтни ниво по месецу — медијана, не просек
+let brojReferentnih = 0;     // колико ћелија чини референтни скуп
+let logOdstupanja = 1;       // полуопсег рампе, из перцентила а не из крајности
 
 function bojaZaCelija(k, target) {
   if (bojaRezim === "odstupanje") {
-    const p = prosekMeseca[t];
+    const p = nivoMeseca[t];
     const r = p > 0 ? cenaSad[k] / p : 1;
-    return bojaIzRampe(PALETA_ODSTUPANJE,
+    return bojaIzRampe(RAMPA_ODSTUPANJA,
       0.5 + Math.log(r) / (2 * logOdstupanja), target);
   }
-  return bojaIzRampe(PALETA,
+  return bojaIzRampe(RAMPA_CENA,
     (cenaSad[k] - CENA_MIN) / (CENA_MAX - CENA_MIN), target);
 }
 
@@ -423,33 +502,101 @@ function pripremi() {
      треперила из месеца у месец, што је баш замка коју deck.gl пример има са
      самоподешавајућим доменом. Држимо се односа, не логаритама, па се логаритам
      узима само двапут на крају. */
-  prosekMeseca = new Float32Array(M);
-  let najveciOdnos = 1, najmanjiOdnos = 1;
+  /* ---------- референтни ниво месеца ----------
+     Према чему се мери „одступање“. Три ствари су намерно овако:
+
+     МЕДИЈАНА, не просек. Расподела цена је десно закошена, па просек вуче
+     скупи реп — једна луксузна ћелија помера ниво целе земље.
+
+     РЕФЕРЕНТНИ СКУП, не све присутне ћелије. Ако ниво рачунају оне ћелије које
+     тог месеца случајно имају податак, онда се он помера кад се промени КО
+     извештава, а не кад се промене цене. Измерено на пробном ретком скупу:
+     ниво преко присутних ћелија је 8–9 % нижи од нивоа преко ћелија које
+     извештавају увек, јер су ове друге градске и скупље. Зато скуп чине ћелије
+     са податком у бар половини месеци — стабилна популација.
+
+     Тај скуп је сам по себи пристрасан ка градовима, и то се не да избећи:
+     негде мора да се бира између стабилног и репрезентативног. Колико га
+     ћелија чини стоји у наслову легенде, да избор не буде скривен.
+
+     На пуној табли — какву генератор прави — скуп је цела мрежа и медијана се
+     рачуна преко свега, па се ништа од овога не примећује. */
+  const pokrivenostCelije = new Int32Array(n);
   for (let i = 0; i < M; i++) {
     const off = i * n;
-    /* Просек иде преко ћелија које тог месеца ИМАЈУ податак. Да се празне
-       рачунале као нуле, просек би падао са бројем празнина, а не са ценама. */
-    let zbir = 0, imaju = 0;
-    for (let k = 0; k < n; k++) {
+    for (let k = 0; k < n; k++) if (cene[off + k] !== NEMA) pokrivenostCelije[k]++;
+  }
+  const prag = Math.max(1, Math.ceil(M / 2));
+  let referentne = [];
+  for (let k = 0; k < n; k++) if (pokrivenostCelije[k] >= prag) referentne.push(k);
+  /* Ако ниједна ћелија не испуни услов — веома редак извод — узима се шта има. */
+  if (!referentne.length) {
+    for (let k = 0; k < n; k++) if (pokrivenostCelije[k] > 0) referentne.push(k);
+  }
+  brojReferentnih = referentne.length;
+
+  /* Медијана бројањем: цене су цели бројеви у уском опсегу, па је један пролаз
+     кроз ћелије и један кроз бројач тачнији и бржи од сортирања. */
+  const BROJAC_M = new Uint32Array(65536);
+  nivoMeseca = new Float32Array(M);
+  for (let i = 0; i < M; i++) {
+    const off = i * n;
+    BROJAC_M.fill(0);
+    let koliko = 0;
+    for (const k of referentne) {
       const c = cene[off + k];
       if (c === NEMA) continue;
-      zbir += c; imaju++;
+      BROJAC_M[c]++; koliko++;
     }
-    const p = imaju ? zbir / imaju : 0;
-    prosekMeseca[i] = p;
-    if (p <= 0) continue;
-    for (let k = 0; k < n; k++) {
-      const c = cene[off + k];
-      if (c === NEMA) continue;
-      const r = c / p;
-      if (r > najveciOdnos) najveciOdnos = r;
-      if (r < najmanjiOdnos) najmanjiOdnos = r;
+    if (!koliko) { nivoMeseca[i] = 0; continue; }
+    const cilj = koliko >> 1;
+    let zbir = 0;
+    for (let c = 0; c < 65536; c++) {
+      zbir += BROJAC_M[c];
+      if (zbir > cilj) { nivoMeseca[i] = c; break; }
     }
   }
-  logOdstupanja = Math.max(
-    Math.log(najveciOdnos),
-    najmanjiOdnos > 0 ? -Math.log(najmanjiOdnos) : 0
-  ) || 1;
+
+  /* ---------- полуопсег рампе ----------
+     Раније је опсег постављала НАЈКРАЈНИЈА ћелија у целом низу, па је једна
+     вредност одређивала скалу за све остале: измерено, 95 % ћелија је 2019.
+     падало у средњих 20 % рампе. Сада га поставља 1./99. перцентил одступања,
+     а реп се одсеца — рампа се тиме користи двоструко боље, а боја остаје
+     сразмерна одступању, па легенда и даље чита поштено.
+
+     Перцентил се тражи хистограмом преко ln(однос), да се 3,8 милиона
+     вредности не сортира. */
+  {
+    const KANTI = 2000, RASPON = 1.5;          // ln(4,48) — довољно за сваки реп
+    const hist = new Uint32Array(KANTI);
+    let ukupno = 0;
+    for (let i = 0; i < M; i++) {
+      const p = nivoMeseca[i];
+      if (p <= 0) continue;
+      const off = i * n;
+      for (let k = 0; k < n; k++) {
+        const c = cene[off + k];
+        if (c === NEMA) continue;
+        let x = Math.log(c / p);
+        x = x < -RASPON ? -RASPON : (x > RASPON ? RASPON : x);
+        let j = Math.floor((x + RASPON) / (2 * RASPON) * KANTI);
+        if (j < 0) j = 0; else if (j >= KANTI) j = KANTI - 1;
+        hist[j]++; ukupno++;
+      }
+    }
+    const perc = (p) => {
+      const cilj = ukupno * p;
+      let zbir = 0;
+      for (let j = 0; j < KANTI; j++) {
+        zbir += hist[j];
+        if (zbir >= cilj) return (j + 0.5) / KANTI * 2 * RASPON - RASPON;
+      }
+      return RASPON;
+    };
+    logOdstupanja = ukupno
+      ? Math.max(Math.abs(perc(0.01)), Math.abs(perc(0.99))) || 1
+      : 1;
+  }
 
   /* Груба мера насељености: близина градова плус ретка расута села.
      У стварном послу ово замењује слој зграда или грађевинско подручје. */
@@ -862,20 +1009,23 @@ function osveziLegendu() {
   const osa = document.getElementById("legenda-osa");
   if (!naslov || !traka || !osa) return;
 
-  const paleta = bojaRezim === "odstupanje" ? PALETA_ODSTUPANJE : PALETA;
-  const stepeni = paleta.map((b, i) =>
-    "rgb(" + b[0] + "," + b[1] + "," + b[2] + ") " +
-    (100 * i / (paleta.length - 1)).toFixed(1) + "%");
-  traka.style.background = "linear-gradient(to right, " + stepeni.join(", ") + ")";
+  traka.style.background = relivRampe(
+    bojaRezim === "odstupanje" ? RAMPA_ODSTUPANJA : RAMPA_CENA);
 
   if (bojaRezim === "odstupanje") {
     const pct = Math.round((Math.exp(logOdstupanja) - 1) * 100);
-    naslov.textContent = "Боја — одступање од просека месеца";
-    osa.innerHTML = "<span>−" + pct + " %</span><span>просек</span><span>+" +
+    /* Пише се МЕДИЈАНА, не „просек“ — да натпис каже баш оно што се рачуна.
+       Од колико ћелија је узета, стоји у наслову преко `title`. */
+    naslov.textContent = "Боја — одступање од медијане месеца";
+    naslov.title = "Медијана се узима преко " +
+      brojReferentnih.toLocaleString("sr-RS") + " ћелија које извештавају у " +
+      "бар половини месеци. Крајњих 1 % одступања је одсечено.";
+    osa.innerHTML = "<span>−" + pct + " %</span><span>медијана</span><span>+" +
                     pct + " %</span>";
     osa.style.justifyContent = "space-between";
   } else {
     naslov.textContent = "Боја — цена по m²";
+    naslov.title = "";
     osa.innerHTML = "<span>" + CENA_MIN + " €</span><span>" + CENA_MAX + " €</span>";
   }
 }
