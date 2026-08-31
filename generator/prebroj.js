@@ -49,6 +49,7 @@
 const fs = require('fs');
 const path = require('path');
 const G = require('./generator.js');
+const C = require('./citaj.js');
 
 // ---------------------------------------------------------------- argumenti
 
@@ -63,215 +64,12 @@ const brojevi = (s) => String(s).split(',').map(x => parseFloat(x.trim())).filte
 const KORACI = brojevi(arg('korak', '3,1.5'));
 const PROZORI = brojevi(arg('prozor', '1,3,6,12')).map(Math.round);
 
-// ---------------------------------------------------------------- CSV
+// ---------------------------------------------------------------- ulaz
 
-/*
- * Razdvajac se ODREDJUJE iz zaglavlja, ne pogadja u hodu.
- *
- * Ovde je lako pogresiti: nasi izvodi su po pravilu tackazapeta-razdvojeni, a
- * decimale pisu zapetom (20,457100). Ako se deli i po zapeti i po tackazapeti,
- * svaka koordinata se raspadne na dva polja i ceo red se pomeri — a greska se
- * ne prijavi kao greska nego kao "nema datuma", jer datum tada padne u pogresnu
- * kolonu. Zato: prebroji kandidate u zaglavlju i uzmi samo jednog.
- */
-function nadjiRazdvajac(zaglavlje) {
-  const kandidati = [';', '\t', ','];
-  let najbolji = ',', najvise = 0;
-  for (const c of kandidati) {
-    const n = zaglavlje.split(c).length - 1;
-    if (n > najvise) { najvise = n; najbolji = c; }
-  }
-  return najbolji;
-}
-
-/* Deli red na polja postujuci navodnike - adresa sme da sadrzi razdvajac.
-   Nije pun CSV parser, ali pokriva navodnike i udvojene navodnike. */
-function podeliRed(red, razdvajac) {
-  const out = [];
-  let polje = '', uNavodnicima = false;
-  for (let i = 0; i < red.length; i++) {
-    const c = red[i];
-    if (uNavodnicima) {
-      if (c === '"') {
-        if (red[i + 1] === '"') { polje += '"'; i++; }
-        else uNavodnicima = false;
-      } else polje += c;
-    } else if (c === '"') uNavodnicima = true;
-    else if (c === razdvajac) { out.push(polje); polje = ''; }
-    else polje += c;
-  }
-  out.push(polje);
-  return out.map(s => s.trim());
-}
-
-/* Broj iz polja: prihvata i 1234.5 i 1234,5, i razmake kao razdelnik hiljada. */
-function broj(polje) {
-  if (polje === undefined || polje === null) return NaN;
-  let s = String(polje).trim().replace(/\s/g, '');
-  if (!s) return NaN;
-  /* Ako ima i tacku i zapetu, poslednja je decimalna. */
-  const zadnjaTacka = s.lastIndexOf('.'), zadnjaZapeta = s.lastIndexOf(',');
-  if (zadnjaTacka > -1 && zadnjaZapeta > -1) {
-    s = zadnjaZapeta > zadnjaTacka
-      ? s.replace(/\./g, '').replace(',', '.')
-      : s.replace(/,/g, '');
-  } else if (zadnjaZapeta > -1) {
-    s = s.replace(',', '.');
-  }
-  return parseFloat(s);
-}
-
-const SINONIMI = {
-  lon: ['lon', 'longitude', 'lng', 'x', 'e', 'gk_e', 'duzina', 'geo_duzina'],
-  lat: ['lat', 'latitude', 'y', 'n', 'gk_n', 'sirina', 'geo_sirina'],
-  datum: ['datum', 'date', 'datum_prometa', 'mesec', 'month', 'datum_ugovora'],
-  cena: ['cena', 'price', 'cena_eur_m2', 'cena_po_m2', 'jedinicna_cena']
-};
-
-function nadjiKolonu(zaglavlje, ime, zadato) {
-  if (zadato) {
-    const i = zaglavlje.indexOf(zadato);
-    if (i < 0) throw new Error('Nema kolone "' + zadato + '". Ima: ' + zaglavlje.join(', '));
-    return i;
-  }
-  for (const kandidat of SINONIMI[ime]) {
-    const i = zaglavlje.findIndex(h => h.toLowerCase() === kandidat);
-    if (i > -1) return i;
-  }
-  return -1;
-}
-
-/* Datum -> "YYYY-MM", ili null ako se ne prepozna. */
-function uMesec(s) {
-  s = String(s).trim();
-  let m;
-  if ((m = s.match(/^(\d{4})-(\d{1,2})/)))            return m[1] + '-' + String(+m[2]).padStart(2, '0');
-  if ((m = s.match(/^(\d{1,2})[.\/](\d{1,2})[.\/](\d{4})/)))
-                                                      return m[3] + '-' + String(+m[2]).padStart(2, '0');
-  if ((m = s.match(/^(\d{4})(\d{2})/)))               return m[1] + '-' + m[2];
-  return null;
-}
-
-function ucitaj(put) {
-  const tekst = fs.readFileSync(put, 'utf8');
-  const redovi = tekst.split(/\r?\n/).filter(r => r.trim());
-  if (redovi.length < 2) throw new Error('CSV je prazan ili ima samo zaglavlje: ' + put);
-
-  const razdvajac = nadjiRazdvajac(redovi[0]);
-  const zaglavlje = podeliRed(redovi[0], razdvajac);
-  const imeRazdvajaca = { ';': 'tackazapeta', '\t': 'tabulator', ',': 'zapeta' }[razdvajac];
-  console.log('Razdvajac: ' + imeRazdvajaca + '   kolona: ' + zaglavlje.length);
-  const iLon = nadjiKolonu(zaglavlje, 'lon', arg('lon', null));
-  const iLat = nadjiKolonu(zaglavlje, 'lat', arg('lat', null));
-  const iDat = nadjiKolonu(zaglavlje, 'datum', arg('datum', null));
-  const iCen = nadjiKolonu(zaglavlje, 'cena', arg('cena', null));
-
-  for (const [ime, i] of [['lon', iLon], ['lat', iLat], ['datum', iDat]]) {
-    if (i < 0) throw new Error('Ne nalazim kolonu za "' + ime + '". Zadajte je sa --' + ime +
-      '. Zaglavlje: ' + zaglavlje.join(', '));
-  }
-  console.log('Kolone: lon=' + zaglavlje[iLon] + '  lat=' + zaglavlje[iLat] +
-    '  datum=' + zaglavlje[iDat] + (iCen > -1 ? '  cena=' + zaglavlje[iCen] : '  (bez cene)'));
-
-  const out = [];
-  const lose = { koordinata: 0, datum: 0 };
-  for (let r = 1; r < redovi.length; r++) {
-    const c = podeliRed(redovi[r], razdvajac);
-    const lon = broj(c[iLon]);
-    const lat = broj(c[iLat]);
-    if (!Number.isFinite(lon) || !Number.isFinite(lat)) { lose.koordinata++; continue; }
-    const mesec = uMesec(c[iDat]);
-    if (!mesec) { lose.datum++; continue; }
-    const cena = iCen > -1 ? broj(c[iCen]) : NaN;
-    out.push({ lon, lat, mesec, cena: Number.isFinite(cena) ? cena : null });
-  }
-  return { transakcije: out, lose };
-}
-
-// ---------------------------------------------------------------- resetka
-
-/*
- * Trazi celiju za datu tacku, bez prolaska kroz svih n celija.
- *
- * Geometrija se ne prepisuje iz generatora nego se CITA iz same mreze koju
- * je on napravio: iz (gx, gy, lon, lat) se vrate korak po sirini, korak po
- * duzini za svaku paralelu i pomak neparnih vrsta. Ako se formula u
- * generatoru promeni, ovo je prati samo od sebe.
- */
-/*
- * Mera rastojanja, zajednicka i brzom putu i gruboj sili.
- *
- * Mora da bude JEDNA: "najbliza celija" nema smisla ako dva puta racunaju
- * rastojanje malo drugacije. Prva verzija je u brzom putu skalirala duzinu
- * po paraleli VRSTE a u gruboj sili po paraleli TACKE; razlika je bila oko
- * metra, ali na tacki tacno izmedju dve celije to je obaralo odluku na
- * suprotnu stranu i provera je prijavljivala neslaganje.
- */
-function napraviMeru(mreza, kmPoStepenuLat, C) {
-  return function (tLon, tLat, k) {
-    const cos = Math.cos(tLat * Math.PI / 180);
-    const dx = (tLon - mreza.lon[k]) * C * cos;
-    const dy = (tLat - mreza.lat[k]) * kmPoStepenuLat;
-    return dx * dx + dy * dy;
-  };
-}
-
-/* Geometrija se cita iz mreze, ne prepisuje iz generatora. */
-function geometrija(mreza) {
-  const { minLon, minLat, lon, lat, gx, gy, n } = mreza;
-  if (!n) throw new Error('Prazna mreza');
-  /* korak po sirini: lat = minLat + (j + 0.5) * dLat */
-  const dLat = (lat[0] - minLat) / (gy[0] + 0.5);
-  /* km po stepenu sirine, izvedeno iz odnosa koraka vrste i R */
-  const kmPoStepenuLat = (1.5 * mreza.poluprecnikKm) / dLat;
-  /* km po stepenu duzine na ekvatoru:  dLon = dxKm/(C*cos(lat)) => C = ... */
-  const dxKm = Math.sqrt(3) * mreza.poluprecnikKm;
-  const pomak0 = (gy[0] & 1) ? 0.5 : 0;
-  const dLon0 = (lon[0] - minLon) / (gx[0] + 0.5 + pomak0);
-  const C = dxKm / (dLon0 * Math.cos(lat[0] * Math.PI / 180));
-  return { dLat, kmPoStepenuLat, dxKm, C };
-}
-
-function napraviTrazioca(mreza) {
-  const { minLon, minLat, gx, gy, n } = mreza;
-  const { dLat, kmPoStepenuLat, dxKm, C } = geometrija(mreza);
-  const rastojanje = napraviMeru(mreza, kmPoStepenuLat, C);
-
-  const dLonZaVrstu = (j) => {
-    const la = minLat + (j + 0.5) * dLat;
-    return dxKm / (C * Math.cos(la * Math.PI / 180));
-  };
-
-  /* (vrsta, kolona) -> indeks celije */
-  const karta = new Map();
-  const KLJUC = (i, j) => j * 100000 + i;
-  for (let k = 0; k < n; k++) karta.set(KLJUC(gx[k], gy[k]), k);
-
-  return function (tLon, tLat) {
-    const jSredina = (tLat - minLat) / dLat - 0.5;
-    let najbolji = -1, najblize = Infinity;
-    /* Sestougaona resetka: najblize srediste moze biti u susednoj vrsti,
-       pa se gleda po jedna vrsta gore i dole, i po jedna kolona levo/desno. */
-    for (let j = Math.floor(jSredina) - 1; j <= Math.floor(jSredina) + 2; j++) {
-      if (j < 0) continue;
-      const la = minLat + (j + 0.5) * dLat;
-      const dLon = dLonZaVrstu(j);
-      const pomak = (j & 1) ? 0.5 : 0;
-      const iSredina = (tLon - minLon) / dLon - 0.5 - pomak;
-      for (let i = Math.floor(iSredina) - 1; i <= Math.floor(iSredina) + 2; i++) {
-        if (i < 0) continue;
-        const k = karta.get(KLJUC(i, j));
-        if (k === undefined) continue;
-        const d = rastojanje(tLon, tLat, k);
-        if (d < najblize) { najblize = d; najbolji = k; }
-      }
-    }
-    /* Ako je najblize srediste dalje od poluprecnika opisanog kruga, tacka
-       nije ni u jednoj celiji — najcesce znaci da je van granice. */
-    if (najbolji < 0) return -1;
-    return najblize <= mreza.poluprecnikKm * mreza.poluprecnikKm ? najbolji : -1;
-  };
-}
+/* CSV citanje, prepoznavanje kolona i trazenje celije stoje u citaj.js —
+   deli ih sa pretvori.js, da oba vide istu tacku u istoj celiji, i da
+   `--proveri` odavde pokriva i konverziju. */
+const { geometrija, napraviMeru, napraviTrazioca } = C;
 
 // ---------------------------------------------------------------- analiza
 
@@ -446,41 +244,62 @@ function proveri(korakKm, kolikoTacaka) {
 function napraviPrimer(godisnje, meseci) {
   const mreza = G.napraviMrezu(1.5);
   const n = mreza.n, M = meseci.length;
-  const sumSela = G.napraviSum(4242, 3, 40);
 
+  /* Tezina po celiji: cetvrti stepen naseljenosti — promet je zgusnutiji od
+     samog stanovnistva. */
+  const skor = G.skorNaseljenosti(mreza);
   const tezina = new Float64Array(n);
   let zbir = 0;
-  for (let k = 0; k < n; k++) {
-    const [x, y] = G.lonLatUKm(mreza.lon[k], mreza.lat[k]);
-    let grad = 0;
-    for (const red of G.GRADOVI) {
-      const [cx, cy] = G.lonLatUKm(red[1], red[2]);
-      grad = Math.max(grad, red[3] * Math.exp(-Math.hypot(x - cx, y - cy) / (red[4] * 0.5)));
-    }
-    /* Cetvrti stepen: promet je zgusnutiji od same naseljenosti. */
-    const v = Math.pow(grad + 0.35 * Math.pow(sumSela(x, y), 3), 4);
-    tezina[k] = v; zbir += v;
-  }
+  for (let k = 0; k < n; k++) { tezina[k] = Math.pow(skor[k], 4); zbir += tezina[k]; }
   const kumulativ = new Float64Array(n);
   let s = 0;
   for (let k = 0; k < n; k++) { s += tezina[k] / zbir; kumulativ[k] = s; }
+
+  /* Prava povrsina cena, da transakcije imaju sta da nose. Konverzija se
+     posle proverava time koliko dobro je iz uzorka rekonstruise. */
+  const serija = G.napraviSeriju(mreza);
+  const cene = new Float32Array(n * M);
+  for (let i = 0; i < M; i++) {
+    const r = serija.sledeciMesec(i);
+    for (let k = 0; k < n; k++) cene[i * n + k] = r.cene[k];
+  }
 
   const rand = G.mulberry32(20260831);
   const ukupno = Math.round(godisnje * M / 12);
   const out = [];
   for (let i = 0; i < ukupno; i++) {
-    /* celija po tezini */
     const u = rand();
     let lo = 0, hi = n - 1;
     while (lo < hi) { const mid = (lo + hi) >> 1; if (kumulativ[mid] < u) lo = mid + 1; else hi = mid; }
-    /* nasumicno unutar celije, grubo: pomeraj do pola poluprecnika */
+    const t = Math.floor(rand() * M);
+
+    /* Nasumicno unutar celije */
     const R = mreza.poluprecnikKm;
     const dxKm = (rand() - 0.5) * R, dyKm = (rand() - 0.5) * R;
     const lat = mreza.lat[lo] + dyKm / 111.13;
     const lon = mreza.lon[lo] + dxKm / (111.320 * Math.cos(lat * Math.PI / 180));
-    out.push({ lon, lat, mesec: meseci[Math.floor(rand() * M)], cena: null });
+
+    /* Cena pojedinacne transakcije rasipa se oko nivoa celije: stanovi se
+       razlikuju po povrsini, spratu, starosti i stanju. Otud i cela nevolja
+       sa poredjenjem meseci — dva prometa u istoj celiji nisu ista stvar.
+       Rasipanje je lognormalno, oko 18 %. */
+    const g = Math.sqrt(-2 * Math.log(rand() || 1e-9)) * Math.cos(2 * Math.PI * rand());
+    const cena = cene[t * n + lo] * Math.exp(0.18 * g);
+
+    out.push({ lon, lat, mesec: meseci[t], cena: Math.round(cena) });
   }
   return out;
+}
+
+/* Uzorak na disk, da ima na cemu da se isproba pretvori.js. */
+function pisiUzorak(put, transakcije) {
+  const KRAJ = String.fromCharCode(10);
+  const delovi = ['lon;lat;datum;cena_eur_m2' + KRAJ];
+  for (const t of transakcije) {
+    delovi.push(t.lon.toFixed(6) + ';' + t.lat.toFixed(6) + ';' +
+      t.mesec + '-15;' + (t.cena === null ? '' : t.cena) + KRAJ);
+  }
+  fs.writeFileSync(put, delovi.join(''));
 }
 
 // ---------------------------------------------------------------- glavno
@@ -515,6 +334,8 @@ function glavno() {
     console.log('Ovo nisu podaci o prometu; sluze samo da se vidi kako izvestaj izgleda.\n');
     transakcije = napraviPrimer(godisnje, meseci);
     izvor = 'sinteticki uzorak, ' + sr(godisnje) + ' godisnje';
+    const pisi = arg('pisi', null);
+    if (pisi) { pisiUzorak(pisi, transakcije); console.log('Uzorak upisan: ' + pisi); }
   } else {
     const ulaz = arg('ulaz', null);
     if (!ulaz) {
@@ -526,7 +347,13 @@ function glavno() {
       process.exit(1);
     }
     if (!fs.existsSync(ulaz)) throw new Error('Nema fajla: ' + ulaz);
-    const u = ucitaj(ulaz);
+    const u = C.ucitajTransakcije(fs, ulaz, {
+      kolone: { lon: arg('lon', null), lat: arg('lat', null),
+                datum: arg('datum', null), cena: arg('cena', null) }
+    });
+    console.log('Razdvajac: ' + u.opis.razdvajac + '   kolone: lon=' + u.opis.lon +
+      '  lat=' + u.opis.lat + '  datum=' + u.opis.datum +
+      (u.opis.cena ? '  cena=' + u.opis.cena : '  (bez cene)'));
     transakcije = u.transakcije;
     izvor = path.basename(ulaz);
     console.log('Ucitano: ' + sr(transakcije.length) + ' transakcija' +
